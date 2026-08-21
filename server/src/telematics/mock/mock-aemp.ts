@@ -48,9 +48,21 @@ function hashStr(s: string): number {
   return h >>> 0;
 }
 
-/** Simulated time: wall time compressed by demoTimeScale from epoch. */
+/**
+ * The simulation runs on a compressed clock (machines cycle through whole
+ * work days quickly so the demo is alive), but every timestamp REPORTED to
+ * the pipeline is real wall time — consumers must never see future dates.
+ */
+function realToSim(realMs: number): number {
+  return EPOCH_MS + (realMs - EPOCH_MS) * config.demoTimeScale;
+}
+
+function simToReal(simMs: number): number {
+  return EPOCH_MS + (simMs - EPOCH_MS) / config.demoTimeScale;
+}
+
 function simNow(): number {
-  return EPOCH_MS + (Date.now() - EPOCH_MS) * config.demoTimeScale;
+  return realToSim(Date.now());
 }
 
 /** Fraction of a sim-day [0,1) in "central time" (UTC-5 for demo). */
@@ -91,7 +103,7 @@ interface MachineState {
   faults: AempFaultCode[];
 }
 
-function machineState(def: MockMachineDef, tMs: number): MachineState {
+function machineState(def: MockMachineDef, tMs: number, realMs: number): MachineState {
   const anchor = JOBSITE_ANCHORS[def.site];
   const seed = hashStr(def.serial);
   const rng = mulberry32(seed);
@@ -148,13 +160,13 @@ function machineState(def: MockMachineDef, tMs: number): MachineState {
           CodeDescription: catalog.desc,
           CodeSeverity: catalog.severity,
           CodeSource: def.oemName,
-          Datetime: new Date(startMs).toISOString(),
+          Datetime: new Date(Math.min(simToReal(startMs), realMs)).toISOString(),
         });
       }
     }
   }
 
-  const ts = new Date(tMs).toISOString();
+  const ts = new Date(realMs).toISOString();
   const state: MachineState = {
     loc: { Latitude: round6(lat), Longitude: round6(lng), Altitude: 190 + Math.round(rng() * 40), AltitudeUnits: 'metre', datetime: ts },
     engineOn: working,
@@ -190,9 +202,9 @@ const FAULT_CATALOG = [
   { code: 'SPN 970 FMI 31', desc: 'Auxiliary engine shutdown switch active', severity: 'medium' },
 ];
 
-function toAempEquipment(def: MockMachineDef, tMs: number): AempEquipment {
-  const s = machineState(def, tMs);
-  const ts = new Date(tMs).toISOString();
+function toAempEquipment(def: MockMachineDef, tMs: number, realMs: number): AempEquipment {
+  const s = machineState(def, tMs, realMs);
+  const ts = new Date(realMs).toISOString();
   const eq: AempEquipment = {
     EquipmentHeader: {
       OEMName: def.oemName,
@@ -226,7 +238,7 @@ export function mockAempTransport(provider: string): AempTransport {
         const page = Number(fleetMatch[1]);
         const body: AempFleetPage = {
           Links: [],
-          Equipment: page === 1 ? defs.map((d) => toAempEquipment(d, simNow())) : [],
+          Equipment: page === 1 ? defs.map((d) => toAempEquipment(d, simNow(), Date.now())) : [],
         };
         return body as T;
       }
@@ -239,11 +251,13 @@ export function mockAempTransport(provider: string): AempTransport {
         const def = defs.find((d) => d.serial === serial);
         const rows: AempLocation[] = [];
         if (def && page === 1 && Number.isFinite(start) && Number.isFinite(end)) {
-          // 15-sim-minute fixes across the window, capped at 400 rows.
-          const stepMs = 15 * 60_000;
+          // Fixes every 10 real minutes across the requested (real-time)
+          // window, positions sampled from the compressed sim clock.
+          const stepMs = 10 * 60_000;
           const from = Math.max(start, EPOCH_MS);
-          for (let t = from, n = 0; t <= end && n < 400; t += stepMs, n++) {
-            rows.push(machineState(def, t).loc);
+          const to = Math.min(end, Date.now());
+          for (let t = from, n = 0; t <= to && n < 400; t += stepMs, n++) {
+            rows.push(machineState(def, realToSim(t), t).loc);
           }
         }
         return { Links: [], Location: rows } as T;
@@ -253,7 +267,7 @@ export function mockAempTransport(provider: string): AempTransport {
         const serial = decodeURIComponent(faultMatch[2]);
         const page = Number(faultMatch[5]);
         const def = defs.find((d) => d.serial === serial);
-        const rows: AempFaultCode[] = def && page === 1 ? machineState(def, simNow()).faults : [];
+        const rows: AempFaultCode[] = def && page === 1 ? machineState(def, simNow(), Date.now()).faults : [];
         return { Links: [], FaultCode: rows } as T;
       }
       throw new Error(`mock AEMP: unknown path ${path}`);

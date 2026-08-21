@@ -16,8 +16,12 @@ export const config = {
     'a4f8c2d91e6b3057a4f8c2d91e6b3057a4f8c2d91e6b3057a4f8c2d91e6b3057',
   /** How often the ingestion service polls OEM feeds (seconds). */
   ingestIntervalSec: Number(process.env.INGEST_INTERVAL_SEC ?? 45),
-  /** Simulated clock speed for the demo fleet (1 = real time). */
-  demoTimeScale: Number(process.env.DEMO_TIME_SCALE ?? 60),
+  /**
+   * Simulated clock speed for the demo fleet (1 = real time). At 12, a full
+   * work day plays out in two real hours, so machines visibly move, work,
+   * park and fault during a demo session.
+   */
+  demoTimeScale: Number(process.env.DEMO_TIME_SCALE ?? 12),
   /** Directory of the built web app served statically in production. */
   webDist: process.env.WEB_DIST ?? path.resolve(here, '../../web/dist'),
   defaultTenantSlug: 'summit-dirtworks',
