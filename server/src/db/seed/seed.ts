@@ -17,9 +17,54 @@ import { config } from '../../config.js';
 
 export function seedIfNeeded(): void {
   const existing = get<{ id: number }>(`SELECT id FROM tenants WHERE slug = ?`, config.defaultTenantSlug);
-  if (existing) return;
-  console.log('[seed] creating demo tenant Summit DirtWorks & Paving');
-  transaction(() => seed());
+  if (!existing) {
+    console.log('[seed] creating demo tenant Summit DirtWorks & Paving');
+    transaction(() => seed());
+  }
+  scheduleDemoOperatorAssignments();
+}
+
+/**
+ * Telematics assets are created by the first ingestion run, so the seed
+ * can't reference them directly. Shortly after boot, put named operators in
+ * the seats of a few OEM machines (only where none is set) so the AI
+ * timecard-draft path has crews to draft for — same thing a dispatcher does
+ * on the fleet board.
+ */
+const DEMO_OPERATORS: Record<string, string> = {
+  'CAT-D6-4201': 'Elena Soto',
+  'CAT-336-2231': 'Jimmy Cole',
+  'JD-870G-7719': 'Binh Tran',
+  'KOM-D61-2245': 'Walt Hayes',
+};
+
+function scheduleDemoOperatorAssignments(): void {
+  const apply = () => {
+    const tenant = get<{ id: number }>(`SELECT id FROM tenants WHERE slug = ?`, config.defaultTenantSlug);
+    if (!tenant) return false;
+    let assigned = 0;
+    let found = 0;
+    for (const [providerAssetId, operator] of Object.entries(DEMO_OPERATORS)) {
+      const asset = get<{ id: number; operator: string | null }>(
+        `SELECT id, operator FROM assets WHERE tenant_id = ? AND provider_asset_id = ?`,
+        tenant.id, providerAssetId,
+      );
+      if (!asset) continue;
+      found++;
+      if (!asset.operator) {
+        run(`UPDATE assets SET operator = ? WHERE id = ?`, operator, asset.id);
+        assigned++;
+      }
+    }
+    if (assigned > 0) console.log(`[seed] assigned ${assigned} demo operators to telematics machines`);
+    return found === Object.keys(DEMO_OPERATORS).length;
+  };
+  // Retry until the first ingestion has materialized the machines.
+  let attempts = 0;
+  const timer = setInterval(() => {
+    if (apply() || ++attempts >= 20) clearInterval(timer);
+  }, 5000);
+  timer.unref?.();
 }
 
 function isoDaysAgo(days: number): string {

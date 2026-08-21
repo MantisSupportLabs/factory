@@ -62,7 +62,8 @@ export const MOCK_FLEETS: Record<string, MockMachineDef[]> = {
     { equipmentId: 'VOL-EC480-9107', oemName: 'Volvo', model: 'EC480E', serial: 'VCEC480EL00319107', category: 'Excavator', year: 2020, site: 'bluestem', baseHours: 5580, idleFactor: 0.24, radiusM: 200, burnLph: 33, tankL: 660, hasDef: true },
   ],
   hitachi: [
-    { equipmentId: 'HIT-ZX350-2210', oemName: 'Hitachi', model: 'ZX350LC-6', serial: 'HCM1V500J00302210', category: 'Excavator', year: 2019, site: 'eagleMtn', baseHours: 7120, idleFactor: 0.29, radiusM: 190, burnLph: 26, tankL: 630, hasDef: true },
+    // Deliberately idle-heavy so the AI idle-alert path has something to flag.
+    { equipmentId: 'HIT-ZX350-2210', oemName: 'Hitachi', model: 'ZX350LC-6', serial: 'HCM1V500J00302210', category: 'Excavator', year: 2019, site: 'eagleMtn', baseHours: 7120, idleFactor: 0.52, radiusM: 190, burnLph: 26, tankL: 630, hasDef: true },
   ],
   develon: [
     { equipmentId: 'DEV-DX225-0034', oemName: 'DEVELON', model: 'DX225LC-7', serial: 'DHKCEBBRC0000034', category: 'Excavator', year: 2023, site: 'us287', baseHours: 890, idleFactor: 0.25, radiusM: 180, burnLph: 21, tankL: 400, hasDef: true },

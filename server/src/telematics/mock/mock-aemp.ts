@@ -236,9 +236,14 @@ export function mockAempTransport(provider: string): AempTransport {
       const fleetMatch = /^\/Fleet\/(\d+)$/.exec(path);
       if (fleetMatch) {
         const page = Number(fleetMatch[1]);
+        // Real OEM snapshots repeat the same datetimes until the machine
+        // next reports, so consecutive polls inside one reporting window are
+        // byte-identical — that's what makes ingestion's dedup meaningful.
+        // Quantize to a 2-real-minute reporting grid to reproduce that.
+        const realQ = Math.floor(Date.now() / 120_000) * 120_000;
         const body: AempFleetPage = {
           Links: [],
-          Equipment: page === 1 ? defs.map((d) => toAempEquipment(d, simNow(), Date.now())) : [],
+          Equipment: page === 1 ? defs.map((d) => toAempEquipment(d, realToSim(realQ), realQ)) : [],
         };
         return body as T;
       }
@@ -251,10 +256,12 @@ export function mockAempTransport(provider: string): AempTransport {
         const def = defs.find((d) => d.serial === serial);
         const rows: AempLocation[] = [];
         if (def && page === 1 && Number.isFinite(start) && Number.isFinite(end)) {
-          // Fixes every 10 real minutes across the requested (real-time)
-          // window, positions sampled from the compressed sim clock.
+          // Fixes on a fixed 10-real-minute grid across the requested
+          // (real-time) window, positions sampled from the compressed sim
+          // clock. Grid alignment keeps timestamps stable across overlapping
+          // windows so ingestion's dedup sees true duplicates.
           const stepMs = 10 * 60_000;
-          const from = Math.max(start, EPOCH_MS);
+          const from = Math.ceil(Math.max(start, EPOCH_MS) / stepMs) * stepMs;
           const to = Math.min(end, Date.now());
           for (let t = from, n = 0; t <= to && n < 400; t += stepMs, n++) {
             rows.push(machineState(def, realToSim(t), t).loc);
