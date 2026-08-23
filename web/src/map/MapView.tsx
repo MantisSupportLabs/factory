@@ -6,11 +6,12 @@
 
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client';
 import type { AssetStateRow, LocationPoint } from '../api/types';
 import { useApp } from '../state/store';
 import { iconMarkup, type IconName } from '../ui/icons';
+import { PlotBoard } from './PlotBoard';
 
 /**
  * Basemaps: Mapbox styles when a token is available (satellite-streets for
@@ -138,7 +139,7 @@ function statusColor(a: AssetStateRow): string {
   return '#72869a';
 }
 
-export function MapView() {
+function GLMap({ onFail }: { onFail: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<Map<number, maplibregl.Marker>>(new Map());
@@ -151,18 +152,32 @@ export function MapView() {
   const mapStyle = useApp((s) => s.mapStyle);
   const selectedAssetId = useApp((s) => s.selectedAssetId);
 
-  /* Create map once. */
+  /* Create map once. GL can be unavailable in sandboxed hosts (WebGL or
+     blob-worker restrictions) — any startup failure hands off to the
+     DOM/SVG plotboard instead of leaving a dead map. */
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: OFFLINE_DEMO ? offlineStyle() : SAT_STYLE,
-      center: [-97.41, 33.03],
-      zoom: 10.3,
-      minZoom: 8,
-      maxZoom: 19,
-      attributionControl: { compact: true },
-    });
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({
+        container: containerRef.current,
+        style: OFFLINE_DEMO ? offlineStyle() : SAT_STYLE,
+        center: [-97.41, 33.03],
+        zoom: 10.3,
+        minZoom: 8,
+        maxZoom: 19,
+        attributionControl: { compact: true },
+      });
+    } catch (err) {
+      console.warn('MapLibre failed to start — using plotboard', err);
+      onFail();
+      return;
+    }
+    const bail = setTimeout(() => {
+      console.warn('MapLibre never reached load — using plotboard');
+      onFail();
+    }, 8000);
+    map.once('load', () => clearTimeout(bail));
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), 'bottom-right');
     map.addControl(new maplibregl.ScaleControl({ unit: 'imperial' }), 'bottom-left');
     const applyZoomClass = () => {
@@ -185,6 +200,7 @@ export function MapView() {
     });
     mapRef.current = map;
     return () => {
+      clearTimeout(bail);
       map.remove();
       mapRef.current = null;
       markersRef.current.clear();
@@ -353,11 +369,20 @@ export function MapView() {
     };
   }, [selectedAssetId, assets.length > 0 ? 1 : 0]);
 
+  return <div ref={containerRef} className="map-container" />;
+}
+
+/**
+ * Map surface: MapLibre GL where it can run; the DOM/SVG plotboard in the
+ * packaged offline demo and wherever GL startup fails.
+ */
+export function MapView() {
+  const [plot, setPlot] = useState(OFFLINE_DEMO);
   const dropArmed = useApp((s) => s.positionDropAssetId != null);
 
   return (
     <div className={`map-wrap${dropArmed ? ' drop-armed' : ''}`}>
-      <div ref={containerRef} className="map-container" />
+      {plot ? <PlotBoard /> : <GLMap onFail={() => setPlot(true)} />}
       {dropArmed && (
         <div className="drop-banner">
           Tap the map to set this asset's position

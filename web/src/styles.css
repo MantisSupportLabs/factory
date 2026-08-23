@@ -674,6 +674,50 @@ label.field {
 .site-chip.behind { border-color: var(--red); color: var(--red); }
 .site-chip.ahead { border-color: var(--green); color: var(--green); }
 
+/* ---------- plotboard (GL-free map surface) ---------- */
+.plotboard {
+  position: absolute;
+  inset: 0;
+  background-color: #0a1016;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.plotboard:active { cursor: grabbing; }
+.plot-svg { position: absolute; inset: 0; pointer-events: none; }
+.plot-abs { position: absolute; transform: translate(-50%, -50%); }
+.plotboard .site-chip { z-index: 4; }
+.plotboard .asset-marker { z-index: 3; }
+.plotboard.zoomed-out .am-label { display: none; }
+.plotboard.zoomed-out .asset-marker .am-icon { width: 22px; height: 22px; }
+.plotboard.zoomed-out .asset-marker .am-icon svg { width: 11px; height: 11px; }
+.plotboard.zoomed-out .site-chip { font-size: 8.5px; padding: 3px 6px; }
+.plot-controls {
+  position: absolute;
+  right: 10px;
+  bottom: 54px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(11, 17, 27, 0.9);
+  border: 1px solid var(--line2);
+  z-index: 6;
+}
+.plot-controls .ghost-btn { min-width: 40px; min-height: 40px; font-size: 18px; color: var(--text); }
+.plot-attr {
+  position: absolute;
+  left: 10px;
+  bottom: 42px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+  z-index: 5;
+  pointer-events: none;
+}
+
 /* Tighter top bar below full desktop width. */
 @media (max-width: 1500px) {
   .brand-tenant { display: none; }
