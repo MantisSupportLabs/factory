@@ -51,6 +51,7 @@ npm run dev      # server on :4000, Vite on http://localhost:5173 proxying /api 
 | `INGEST_INTERVAL_SEC` | `45` | OEM feed poll interval |
 | `DEMO_TIME_SCALE` | `12` | Simulated fleet clock speed (1 = real time) |
 | `WEB_DIST` | `web/dist` | Built web app served in single-process mode |
+| `VITE_MAPBOX_TOKEN` | – | Mapbox public token for satellite-streets/dark basemaps (put it in `web/.env.local`, see `web/.env.example`); without it the map falls back to Esri/OSM rasters. Also settable at runtime via `localStorage['dirtworks.mapboxToken']` |
 
 ## Multi-tenancy
 

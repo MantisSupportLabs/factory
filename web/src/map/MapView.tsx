@@ -11,35 +11,52 @@ import { api } from '../api/client';
 import type { AssetStateRow, LocationPoint } from '../api/types';
 import { useApp } from '../state/store';
 
-const SAT_STYLE: maplibregl.StyleSpecification = {
-  version: 8,
-  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-  sources: {
-    sat: {
-      type: 'raster',
-      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-      tileSize: 256,
-      maxzoom: 19,
-      attribution: 'Imagery © Esri & contributors',
-    },
-  },
-  layers: [{ id: 'sat', type: 'raster', source: 'sat' }],
-};
+/**
+ * Basemaps: Mapbox styles when a token is available (satellite-streets for
+ * imagery, dark for streets — served as raster tiles so MapLibre consumes
+ * them directly), falling back to public Esri/OSM rasters without one.
+ * VITE_MAPBOX_TOKEN overrides the default public token at build time.
+ */
+const MAPBOX_TOKEN: string =
+  (import.meta.env.VITE_MAPBOX_TOKEN as string | undefined) ?? storedMapboxToken();
 
-const STREET_STYLE: maplibregl.StyleSpecification = {
-  version: 8,
-  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-  sources: {
-    osm: {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      maxzoom: 19,
-      attribution: '© OpenStreetMap contributors',
-    },
-  },
-  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
-};
+/** Runtime fallback: paste a token once via localStorage without rebuilding. */
+function storedMapboxToken(): string {
+  try {
+    return localStorage.getItem('dirtworks.mapboxToken') ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function rasterStyle(tiles: string[], tileSize: number, attribution: string): maplibregl.StyleSpecification {
+  return {
+    version: 8,
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+    sources: { base: { type: 'raster', tiles, tileSize, maxzoom: 19, attribution } },
+    layers: [{ id: 'base', type: 'raster', source: 'base' }],
+  };
+}
+
+function mapboxStyle(styleId: string): maplibregl.StyleSpecification {
+  return rasterStyle(
+    [`https://api.mapbox.com/styles/v1/mapbox/${styleId}/tiles/512/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`],
+    512,
+    '© Mapbox © OpenStreetMap © Maxar',
+  );
+}
+
+const SAT_STYLE: maplibregl.StyleSpecification = MAPBOX_TOKEN
+  ? mapboxStyle('satellite-streets-v12')
+  : rasterStyle(
+      ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+      256,
+      'Imagery © Esri & contributors',
+    );
+
+const STREET_STYLE: maplibregl.StyleSpecification = MAPBOX_TOKEN
+  ? mapboxStyle('dark-v11')
+  : rasterStyle(['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], 256, '© OpenStreetMap contributors');
 
 const KIND_ICON: Record<string, string> = {
   machine: '🚜',
