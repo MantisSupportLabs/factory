@@ -105,6 +105,22 @@ export interface ModuleDef {
   icon: IconName;
 }
 
+/** Top-menu categories. Single-item groups render as direct tabs. */
+export interface ModuleGroup {
+  id: string;
+  label: string;
+  items: ModuleId[];
+}
+
+export const MODULE_GROUPS: ModuleGroup[] = [
+  { id: 'jobsites', label: 'Jobsites', items: ['jobsites'] },
+  { id: 'assets', label: 'Assets', items: ['equipment', 'fleet', 'tools'] },
+  { id: 'sitetech', label: 'Site Tech', items: ['cameras', 'connectivity'] },
+  { id: 'intel', label: 'Intel', items: ['insights', 'reports'] },
+  { id: 'office', label: 'Office', items: ['timecards', 'safety'] },
+  { id: 'oem', label: 'OEM', items: ['connectors'] },
+];
+
 export const MODULES: ModuleDef[] = [
   { id: 'jobsites', label: 'Jobsites', short: 'Jobsites', icon: 'pin' },
   { id: 'equipment', label: 'Equipment', short: 'Equipment', icon: 'dozer' },

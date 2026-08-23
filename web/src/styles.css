@@ -61,7 +61,8 @@ body {
   padding: 0 0 0 14px;
   background: var(--bg1);
   border-bottom: 1px solid var(--line);
-  overflow: hidden;
+  position: relative;
+  z-index: 40; /* category menus overhang the map */
 }
 .brand { display: flex; align-items: center; gap: 10px; white-space: nowrap; padding-right: 18px; border-right: 1px solid var(--line); }
 .brand-mark { display: flex; align-items: center; color: var(--accent); }
@@ -82,10 +83,8 @@ body {
   align-items: stretch;
   flex: 1;
   min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
 }
-.module-tabs::-webkit-scrollbar { display: none; }
+.nav-group { position: relative; display: flex; align-items: stretch; }
 .tab {
   display: flex;
   align-items: center;
@@ -108,6 +107,48 @@ body {
   border-bottom-color: var(--accent);
   background: linear-gradient(180deg, transparent 40%, rgba(63, 198, 240, 0.08));
 }
+.tab.open { background: var(--bg2); color: var(--text); }
+.tab .caret { display: inline-flex; margin-left: 6px; opacity: 0.55; transition: transform 0.12s; }
+.tab.open .caret { transform: rotate(180deg); opacity: 1; }
+
+.nav-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 216px;
+  background: var(--bg2);
+  border: 1px solid var(--line2);
+  border-top-color: var(--accent);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+  z-index: 60;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: none;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--dim);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.nav-item svg { color: var(--faint); flex-shrink: 0; }
+.nav-item:active { background: var(--bg3); color: var(--text); }
+.nav-item.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: rgba(63, 198, 240, 0.07);
+}
+.nav-item.active svg { color: var(--accent); }
 
 .topbar-right { display: flex; align-items: center; gap: 4px; padding: 0 10px; border-left: 1px solid var(--line); }
 .sync-dot { width: 8px; height: 8px; background: var(--green); box-shadow: 0 0 6px var(--green); margin-right: 4px; }

@@ -7,7 +7,7 @@
 export type IconName =
   | 'pin' | 'dozer' | 'toolbox' | 'truck' | 'camera' | 'antenna' | 'spark'
   | 'file' | 'clock' | 'shield' | 'plug' | 'cog' | 'trailer' | 'layers'
-  | 'chevron-left' | 'chevron-right' | 'x' | 'printer' | 'check' | 'warning'
+  | 'chevron-left' | 'chevron-right' | 'chevron-down' | 'x' | 'printer' | 'check' | 'warning'
   | 'crosshair' | 'globe' | 'cube' | 'mountain';
 
 const P: Record<IconName, string> = {
@@ -27,6 +27,7 @@ const P: Record<IconName, string> = {
   layers: '<path d="M12 3.5 21 8.5l-9 5-9-5z"/><path d="M4.6 12.4 12 16.5l7.4-4.1M4.6 16.1 12 20.2l7.4-4.1"/>',
   'chevron-left': '<path d="M14.5 5.5 8 12l6.5 6.5"/>',
   'chevron-right': '<path d="M9.5 5.5 16 12l-6.5 6.5"/>',
+  'chevron-down': '<path d="M5.5 9.5 12 16l6.5-6.5"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
   printer: '<path d="M7 8V3.5h10V8"/><path d="M5 8h14v7h-3.5M8.5 15H5V8"/><rect x="8.5" y="12.5" width="7" height="8"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
