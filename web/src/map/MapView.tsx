@@ -1,0 +1,280 @@
+/**
+ * Center map. MapLibre GL (Mapbox-GL-compatible API) with satellite/street
+ * raster bases, jobsite boundaries, live asset markers, the selected asset's
+ * breadcrumb trail, and tap-to-drop manual positioning.
+ */
+
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { useEffect, useRef } from 'react';
+import { api } from '../api/client';
+import type { AssetStateRow, LocationPoint } from '../api/types';
+import { useApp } from '../state/store';
+
+const SAT_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+  sources: {
+    sat: {
+      type: 'raster',
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: 'Imagery © Esri & contributors',
+    },
+  },
+  layers: [{ id: 'sat', type: 'raster', source: 'sat' }],
+};
+
+const STREET_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+};
+
+const KIND_ICON: Record<string, string> = {
+  machine: '🚜',
+  truck: '🚛',
+  small_tool: '🧰',
+  attachment: '🔩',
+  camera: '📷',
+  network: '📡',
+  trailer: '🏠',
+};
+
+function statusColor(a: AssetStateRow): string {
+  if (a.active_faults > 0) return '#e5484d';
+  if (a.engine_status === 'running') return '#30a46c';
+  if (a.engine_status === 'idle') return '#f5a623';
+  return '#8b98a5';
+}
+
+export function MapView() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markersRef = useRef<Map<number, maplibregl.Marker>>(new Map());
+  const siteChipsRef = useRef<maplibregl.Marker[]>([]);
+  const didFitRef = useRef(false);
+
+  const assets = useApp((s) => s.assets);
+  const jobsites = useApp((s) => s.jobsites);
+  const mapStyle = useApp((s) => s.mapStyle);
+  const selectedAssetId = useApp((s) => s.selectedAssetId);
+
+  /* Create map once. */
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: SAT_STYLE,
+      center: [-97.41, 33.03],
+      zoom: 10.3,
+      attributionControl: { compact: true },
+    });
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), 'bottom-right');
+    map.addControl(new maplibregl.ScaleControl({ unit: 'imperial' }), 'bottom-left');
+    map.on('click', (e) => {
+      const { positionDropAssetId } = useApp.getState();
+      if (positionDropAssetId != null) {
+        api
+          .post(`/assets/${positionDropAssetId}/position`, { lat: e.lngLat.lat, lng: e.lngLat.lng })
+          .then(() => {
+            useApp.getState().armPositionDrop(null);
+            useApp.getState().refresh();
+            useApp.getState().bumpVersion();
+          })
+          .catch((err) => console.error('position drop failed', err));
+      }
+    });
+    mapRef.current = map;
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      markersRef.current.clear();
+    };
+  }, []);
+
+  /* Style switch. */
+  useEffect(() => {
+    mapRef.current?.setStyle(mapStyle === 'satellite' ? SAT_STYLE : STREET_STYLE);
+  }, [mapStyle]);
+
+  /* Jobsite boundaries + name chips. */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const draw = () => {
+      const features = jobsites
+        .filter((j) => j.boundary)
+        .map((j) => ({
+          type: 'Feature' as const,
+          properties: { id: j.id, name: j.name },
+          geometry: JSON.parse(j.boundary!) as GeoJSON.Geometry,
+        }));
+      const data: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features };
+      const existing = map.getSource('jobsites') as maplibregl.GeoJSONSource | undefined;
+      if (existing) {
+        existing.setData(data);
+      } else {
+        map.addSource('jobsites', { type: 'geojson', data });
+        map.addLayer({
+          id: 'jobsites-fill',
+          type: 'fill',
+          source: 'jobsites',
+          paint: { 'fill-color': '#f5a623', 'fill-opacity': 0.08 },
+        });
+        map.addLayer({
+          id: 'jobsites-line',
+          type: 'line',
+          source: 'jobsites',
+          paint: { 'line-color': '#f5a623', 'line-width': 2, 'line-dasharray': [3, 2] },
+        });
+      }
+      // Name chips as DOM markers (no glyph dependency).
+      siteChipsRef.current.forEach((m) => m.remove());
+      siteChipsRef.current = jobsites.map((j) => {
+        const el = document.createElement('div');
+        el.className = 'site-chip';
+        el.textContent = j.name;
+        el.onclick = (ev) => {
+          ev.stopPropagation();
+          useApp.getState().selectJobsite(j.id);
+          useApp.getState().setModule('jobsites');
+        };
+        return new maplibregl.Marker({ element: el, anchor: 'bottom', offset: [0, -14] })
+          .setLngLat([j.lng, j.lat])
+          .addTo(map);
+      });
+      if (!didFitRef.current && jobsites.length > 0) {
+        didFitRef.current = true;
+        const b = new maplibregl.LngLatBounds();
+        jobsites.forEach((j) => b.extend([j.lng, j.lat]));
+        map.fitBounds(b, { padding: 90, maxZoom: 12 });
+      }
+    };
+    if (map.isStyleLoaded()) draw();
+    map.on('styledata', draw);
+    return () => {
+      map.off('styledata', draw);
+    };
+  }, [jobsites, mapStyle]);
+
+  /* Asset markers. */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const seen = new Set<number>();
+    for (const a of assets) {
+      if (a.lat == null || a.lng == null) continue;
+      seen.add(a.id);
+      let marker = markersRef.current.get(a.id);
+      if (!marker) {
+        const el = document.createElement('div');
+        el.className = 'asset-marker';
+        el.onclick = (ev) => {
+          ev.stopPropagation();
+          useApp.getState().selectAsset(a.id);
+        };
+        marker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([a.lng, a.lat]).addTo(map);
+        markersRef.current.set(a.id, marker);
+      } else {
+        marker.setLngLat([a.lng, a.lat]);
+      }
+      const el = marker.getElement();
+      const selected = a.id === selectedAssetId;
+      el.className = `asset-marker${selected ? ' selected' : ''}`;
+      el.style.setProperty('--ring', statusColor(a));
+      el.innerHTML = `<span class="am-icon">${KIND_ICON[a.kind] ?? '📦'}</span><span class="am-label">${escapeHtml(
+        a.name,
+      )}</span>`;
+      el.title = `${a.name}${a.engine_status ? ` — ${a.engine_status}` : ''}`;
+    }
+    for (const [id, marker] of markersRef.current) {
+      if (!seen.has(id)) {
+        marker.remove();
+        markersRef.current.delete(id);
+      }
+    }
+  }, [assets, selectedAssetId]);
+
+  /* Selected asset breadcrumb trail. */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    let cancelled = false;
+    const clear = () => {
+      if (map.getLayer('trail-line')) map.removeLayer('trail-line');
+      if (map.getLayer('trail-dots')) map.removeLayer('trail-dots');
+      if (map.getSource('trail')) map.removeSource('trail');
+    };
+    if (selectedAssetId == null) {
+      if (map.isStyleLoaded()) clear();
+      return;
+    }
+    api
+      .get<LocationPoint[]>(`/assets/${selectedAssetId}/locations?limit=300`)
+      .then((points) => {
+        if (cancelled || !mapRef.current || points.length === 0) return;
+        const coords = points.map((p) => [p.lng, p.lat] as [number, number]);
+        const data: GeoJSON.FeatureCollection = {
+          type: 'FeatureCollection',
+          features: [
+            { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } },
+            ...coords.map((c) => ({
+              type: 'Feature' as const,
+              properties: {},
+              geometry: { type: 'Point' as const, coordinates: c },
+            })),
+          ],
+        };
+        clear();
+        map.addSource('trail', { type: 'geojson', data });
+        map.addLayer({
+          id: 'trail-line',
+          type: 'line',
+          source: 'trail',
+          filter: ['==', '$type', 'LineString'],
+          paint: { 'line-color': '#4cc2ff', 'line-width': 2.5, 'line-opacity': 0.85 },
+        });
+        map.addLayer({
+          id: 'trail-dots',
+          type: 'circle',
+          source: 'trail',
+          filter: ['==', '$type', 'Point'],
+          paint: { 'circle-radius': 2.5, 'circle-color': '#4cc2ff', 'circle-opacity': 0.6 },
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      if (map.isStyleLoaded()) clear();
+    };
+  }, [selectedAssetId, assets.length > 0 ? 1 : 0]);
+
+  const dropArmed = useApp((s) => s.positionDropAssetId != null);
+
+  return (
+    <div className={`map-wrap${dropArmed ? ' drop-armed' : ''}`}>
+      <div ref={containerRef} className="map-container" />
+      {dropArmed && (
+        <div className="drop-banner">
+          Tap the map to set this asset's position
+          <button onClick={() => useApp.getState().armPositionDrop(null)}>Cancel</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
