@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { AssetStateRow, Jobsite } from '../api/types';
 import { api } from '../api/client';
+import type { IconName } from '../ui/icons';
 
 export type ModuleId =
   | 'jobsites'
@@ -99,19 +100,21 @@ export const WIDE_MODULES = new Set<ModuleId>(['insights', 'reports', 'timecards
 export interface ModuleDef {
   id: ModuleId;
   label: string;
-  icon: string;
+  /** Compact label for the top tab bar; full label everywhere else. */
+  short: string;
+  icon: IconName;
 }
 
 export const MODULES: ModuleDef[] = [
-  { id: 'jobsites', label: 'Jobsites', icon: '📍' },
-  { id: 'equipment', label: 'Equipment', icon: '🚜' },
-  { id: 'tools', label: 'Small Tools', icon: '🧰' },
-  { id: 'fleet', label: 'Truck Fleet', icon: '🚛' },
-  { id: 'cameras', label: 'Cameras', icon: '📷' },
-  { id: 'connectivity', label: 'Connectivity', icon: '📡' },
-  { id: 'insights', label: 'AI Insights', icon: '✨' },
-  { id: 'reports', label: 'Reports', icon: '📄' },
-  { id: 'timecards', label: 'Timecards', icon: '⏱️' },
-  { id: 'safety', label: 'Safety', icon: '🦺' },
-  { id: 'connectors', label: 'Connectors', icon: '🔌' },
+  { id: 'jobsites', label: 'Jobsites', short: 'Jobsites', icon: 'pin' },
+  { id: 'equipment', label: 'Equipment', short: 'Equipment', icon: 'dozer' },
+  { id: 'tools', label: 'Small Tools', short: 'Tools', icon: 'toolbox' },
+  { id: 'fleet', label: 'Truck Fleet', short: 'Fleet', icon: 'truck' },
+  { id: 'cameras', label: 'Cameras', short: 'Cameras', icon: 'camera' },
+  { id: 'connectivity', label: 'Connectivity', short: 'Network', icon: 'antenna' },
+  { id: 'insights', label: 'AI Insights', short: 'AI', icon: 'spark' },
+  { id: 'reports', label: 'Reports', short: 'Reports', icon: 'file' },
+  { id: 'timecards', label: 'Timecards', short: 'Timecards', icon: 'clock' },
+  { id: 'safety', label: 'Safety', short: 'Safety', icon: 'shield' },
+  { id: 'connectors', label: 'Connectors', short: 'OEM', icon: 'plug' },
 ];

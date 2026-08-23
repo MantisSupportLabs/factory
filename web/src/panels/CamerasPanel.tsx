@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { useApp } from '../state/store';
+import { Icon } from '../ui/icons';
 
 interface CameraStatus {
   online: boolean;
@@ -96,7 +97,7 @@ export default function CamerasPanel() {
             className={`list-row${c.id === selectedId ? ' selected' : ''}`}
             onClick={() => useApp.getState().selectAsset(c.id)}
           >
-            <span className="row-icon">📷</span>
+            <span className="row-icon"><Icon name="camera" /></span>
             <div className="row-main">
               <div className="row-title">{c.name}</div>
               <div className="row-sub">{[c.model, c.jobsite_name].filter(Boolean).join(' · ') || 'camera'}</div>

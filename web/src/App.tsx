@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect } from 'react';
+import { Icon } from './ui/icons';
 import { TopBar } from './layout/TopBar';
 import { AssetDetail } from './layout/AssetDetail';
 import { MapView } from './map/MapView';
@@ -32,11 +33,13 @@ export default function App() {
       <TopBar />
       <aside className="sidebar-left">
         <div className="panel-header">
-          <span className="panel-icon">{moduleDef.icon}</span>
+          <span className="panel-icon">
+            <Icon name={moduleDef.icon} size={16} />
+          </span>
           <h1>{moduleDef.label}</h1>
           {isWide && (
             <button className="ghost-btn" onClick={() => setWideOpen(!wideOpen)} title="Expand">
-              {wideOpen ? '⇤' : '⇥'}
+              <Icon name={wideOpen ? 'chevron-left' : 'chevron-right'} size={15} />
             </button>
           )}
         </div>
@@ -53,10 +56,10 @@ export default function App() {
           <div className="wide-drawer">
             <div className="wide-head">
               <h1>
-                {moduleDef.icon} {moduleDef.label}
+                <Icon name={moduleDef.icon} size={16} /> {moduleDef.label}
               </h1>
               <button className="ghost-btn" onClick={() => setWideOpen(false)}>
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
             <div className="wide-body">

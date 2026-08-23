@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { api } from '../api/client';
 import type { Jobsite } from '../api/types';
 import { useApp } from '../state/store';
+import { Icon } from '../ui/icons';
 
 function statusPillClass(status: string): string {
   switch (status) {
@@ -93,7 +94,7 @@ export default function JobsitesPanel() {
           className={`list-row${j.id === selectedId ? ' selected' : ''}`}
           onClick={() => useApp.getState().selectJobsite(j.id)}
         >
-          <span className="row-icon">📍</span>
+          <span className="row-icon"><Icon name="pin" /></span>
           <div className="row-main">
             <div className="row-title">{j.name}</div>
             <div className="row-sub">

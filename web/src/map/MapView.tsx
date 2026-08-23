@@ -10,6 +10,7 @@ import { useEffect, useRef } from 'react';
 import { api } from '../api/client';
 import type { AssetStateRow, LocationPoint } from '../api/types';
 import { useApp } from '../state/store';
+import { iconMarkup, type IconName } from '../ui/icons';
 
 /**
  * Basemaps: Mapbox styles when a token is available (satellite-streets for
@@ -58,21 +59,21 @@ const STREET_STYLE: maplibregl.StyleSpecification = MAPBOX_TOKEN
   ? mapboxStyle('dark-v11')
   : rasterStyle(['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], 256, '© OpenStreetMap contributors');
 
-const KIND_ICON: Record<string, string> = {
-  machine: '🚜',
-  truck: '🚛',
-  small_tool: '🧰',
-  attachment: '🔩',
-  camera: '📷',
-  network: '📡',
-  trailer: '🏠',
+const KIND_ICON: Record<string, IconName> = {
+  machine: 'dozer',
+  truck: 'truck',
+  small_tool: 'toolbox',
+  attachment: 'cog',
+  camera: 'camera',
+  network: 'antenna',
+  trailer: 'trailer',
 };
 
 function statusColor(a: AssetStateRow): string {
   if (a.active_faults > 0) return '#e5484d';
-  if (a.engine_status === 'running') return '#30a46c';
-  if (a.engine_status === 'idle') return '#f5a623';
-  return '#8b98a5';
+  if (a.engine_status === 'running') return '#37c98b';
+  if (a.engine_status === 'idle') return '#e8a33d';
+  return '#72869a';
 }
 
 export function MapView() {
@@ -147,13 +148,13 @@ export function MapView() {
           id: 'jobsites-fill',
           type: 'fill',
           source: 'jobsites',
-          paint: { 'fill-color': '#f5a623', 'fill-opacity': 0.08 },
+          paint: { 'fill-color': '#e8a33d', 'fill-opacity': 0.08 },
         });
         map.addLayer({
           id: 'jobsites-line',
           type: 'line',
           source: 'jobsites',
-          paint: { 'line-color': '#f5a623', 'line-width': 2, 'line-dasharray': [3, 2] },
+          paint: { 'line-color': '#e8a33d', 'line-width': 2, 'line-dasharray': [3, 2] },
         });
       }
       // Name chips as DOM markers (no glyph dependency).
@@ -210,7 +211,7 @@ export function MapView() {
       const selected = a.id === selectedAssetId;
       el.className = `asset-marker${selected ? ' selected' : ''}`;
       el.style.setProperty('--ring', statusColor(a));
-      el.innerHTML = `<span class="am-icon">${KIND_ICON[a.kind] ?? '📦'}</span><span class="am-label">${escapeHtml(
+      el.innerHTML = `<span class="am-icon">${iconMarkup(KIND_ICON[a.kind] ?? 'cube', 15)}</span><span class="am-label">${escapeHtml(
         a.name,
       )}</span>`;
       el.title = `${a.name}${a.engine_status ? ` — ${a.engine_status}` : ''}`;
@@ -260,14 +261,14 @@ export function MapView() {
           type: 'line',
           source: 'trail',
           filter: ['==', '$type', 'LineString'],
-          paint: { 'line-color': '#4cc2ff', 'line-width': 2.5, 'line-opacity': 0.85 },
+          paint: { 'line-color': '#3fc6f0', 'line-width': 2.5, 'line-opacity': 0.85 },
         });
         map.addLayer({
           id: 'trail-dots',
           type: 'circle',
           source: 'trail',
           filter: ['==', '$type', 'Point'],
-          paint: { 'circle-radius': 2.5, 'circle-color': '#4cc2ff', 'circle-opacity': 0.6 },
+          paint: { 'circle-radius': 2.5, 'circle-color': '#3fc6f0', 'circle-opacity': 0.6 },
         });
       })
       .catch(() => {});

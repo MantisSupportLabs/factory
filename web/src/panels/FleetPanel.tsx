@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { AssetStateRow } from '../api/types';
 import { useApp } from '../state/store';
+import { Icon } from '../ui/icons';
 
 type TruckRow = AssetStateRow & { today: { loads: number; tons: number | null } | null };
 
@@ -124,7 +125,7 @@ export default function FleetPanel() {
           className={`list-row${t.id === selectedId ? ' selected' : ''}`}
           onClick={() => useApp.getState().selectAsset(t.id)}
         >
-          <span className="row-icon">🚛</span>
+          <span className="row-icon"><Icon name="truck" /></span>
           <div className="row-main">
             <div className="row-title">{t.name}</div>
             <div className="row-sub">

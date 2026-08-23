@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { AssetStateRow, FaultRow, MetricPoint } from '../api/types';
 import { useApp } from '../state/store';
+import { Icon } from '../ui/icons';
 
 function fmt(v: number | null | undefined, digits = 0, suffix = ''): string {
   if (v == null || Number.isNaN(v)) return '—';
@@ -25,7 +26,7 @@ function ago(ts: string | null | undefined): string {
 
 function Gauge({ label, pct, warn }: { label: string; pct: number | null; warn: number }) {
   const v = pct == null ? null : Math.max(0, Math.min(100, pct));
-  const color = v == null ? '#5a6672' : v <= warn ? '#e5484d' : v <= warn * 2 ? '#f5a623' : '#30a46c';
+  const color = v == null ? '#48586b' : v <= warn ? '#e5484d' : v <= warn * 2 ? '#e8a33d' : '#37c98b';
   return (
     <div className="gauge">
       <div className="gauge-head">
@@ -52,7 +53,7 @@ function Sparkline({ points }: { points: MetricPoint[] }) {
     .join(' ');
   return (
     <svg className="sparkline" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-      <path d={d} fill="none" stroke="#4cc2ff" strokeWidth="1.5" />
+      <path d={d} fill="none" stroke="#3fc6f0" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -175,7 +176,7 @@ export function AssetDetail() {
           </button>
         </div>
         <button className="btn wide" onClick={() => useApp.getState().armPositionDrop(id)}>
-          📍 Set position on map
+          <Icon name="crosshair" size={15} /> Set position on map
         </button>
       </div>
     </div>

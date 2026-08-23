@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import type { AssetStateRow } from '../api/types';
 import { useApp } from '../state/store';
+import { Icon } from '../ui/icons';
 
 type Chip = 'all' | 'running' | 'idle' | 'faults';
 
@@ -87,14 +88,14 @@ export default function EquipmentPanel() {
           className={`list-row${a.id === selectedId ? ' selected' : ''}`}
           onClick={() => useApp.getState().selectAsset(a.id)}
         >
-          <span className="row-icon">🚜</span>
+          <span className="row-icon"><Icon name="dozer" /></span>
           <div className="row-main">
             <div className="row-title">{a.name}</div>
             <div className="row-sub">{[a.make, a.model].filter(Boolean).join(' ') || a.category || 'machine'}</div>
           </div>
           <div className="row-end">
             <span style={{ display: 'flex', gap: 4 }}>
-              {a.active_faults > 0 && <span className="pill pill-red">⚠ {a.active_faults}</span>}
+              {a.active_faults > 0 && <span className="pill pill-red">FLT {a.active_faults}</span>}
               <span className={`pill status-${a.engine_status ?? 'unknown'}`}>
                 {a.engine_status ?? 'no signal'}
               </span>

@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { Jobsite } from '../api/types';
 import { useApp } from '../state/store';
+import { Icon } from '../ui/icons';
 
 interface JobsiteSummary {
   machines: number;
@@ -109,7 +110,7 @@ export default function JobsiteDetail() {
       <div className="asset-detail">
         <div className="detail-title">
           <h2>Jobsite</h2>
-          <button className="ghost-btn" onClick={() => useApp.getState().selectJobsite(null)}>✕</button>
+          <button className="ghost-btn" onClick={() => useApp.getState().selectJobsite(null)}><Icon name="x" size={15} /></button>
         </div>
         <p className="muted">Error: {error}</p>
       </div>
@@ -194,7 +195,7 @@ export default function JobsiteDetail() {
 
       <div className="detail-section">
         <button className="btn primary wide" disabled={busy} onClick={generateReport}>
-          {busy ? 'Generating…' : '📄 Generate daily report'}
+          {busy ? 'Generating…' : <><Icon name="file" size={14} /> Generate daily report</>}
         </button>
         {reportMsg && (
           <p className="muted" style={{ marginTop: 8 }}>

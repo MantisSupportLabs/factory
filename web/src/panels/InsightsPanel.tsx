@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import type { AiInsight, AiSetting } from '../api/types';
 import { useApp } from '../state/store';
+import { Icon } from '../ui/icons';
 
 interface AnalyzeStats {
   insightsCreated: number;
@@ -210,7 +211,7 @@ export default function InsightsPanel() {
           })}
           <div className="row-between" style={{ marginTop: 12, flexWrap: 'wrap' }}>
             <button className="btn primary" disabled={busy} onClick={() => void runAnalyze()}>
-              ✨ Run analysis now
+              <Icon name="spark" size={14} /> Run analysis now
             </button>
             {analyzeStats && (
               <span className="muted" style={{ fontSize: 12 }}>
@@ -285,7 +286,7 @@ export default function InsightsPanel() {
                       style={p.at_risk ? { background: 'rgba(229, 72, 77, 0.08)' } : undefined}
                     >
                       <td>
-                        {p.at_risk && <span title="At risk">⚠ </span>}
+                        {p.at_risk && <span title="At risk"><Icon name="warning" size={12} /> </span>}
                         {p.jobsite_name}
                       </td>
                       <td>

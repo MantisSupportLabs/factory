@@ -107,9 +107,9 @@ export default function ConnectorsPanel() {
     setResult(id, 'Testing connection…');
     try {
       const r = await api.post<TestResult>(`/credentials/${id}/test`);
-      setResult(id, `${r.ok ? '✔' : '✖'} ${r.detail}`);
+      setResult(id, `${r.ok ? 'OK —' : 'FAILED —'} ${r.detail}`);
     } catch (err) {
-      setResult(id, `✖ ${(err as Error).message}`);
+      setResult(id, `FAILED — ${(err as Error).message}`);
     } finally {
       setBusyId(null);
     }

@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { useApp } from '../state/store';
+import { Icon } from '../ui/icons';
 
 type ReportKind = 'daily' | 'production' | 'utilization' | 'safety' | 'timecards';
 
@@ -172,7 +173,7 @@ function ReportViewer({ report }: { report: ReportFullRow }) {
           </div>
         </div>
         <button className="btn small" onClick={() => window.print()}>
-          🖨 Print
+          <Icon name="printer" size={14} /> Print
         </button>
       </div>
       {Array.isArray(payload) && (

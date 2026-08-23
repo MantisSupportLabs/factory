@@ -1,4 +1,5 @@
 import { MODULES, useApp } from '../state/store';
+import { Icon } from '../ui/icons';
 
 export function TopBar() {
   const module = useApp((s) => s.module);
@@ -13,7 +14,9 @@ export function TopBar() {
   return (
     <header className="topbar">
       <div className="brand">
-        <span className="brand-mark">⛰</span>
+        <span className="brand-mark">
+          <Icon name="mountain" size={20} />
+        </span>
         <span className="brand-name">
           DirtWorks <span className="brand-sub">Ops</span>
         </span>
@@ -27,8 +30,7 @@ export function TopBar() {
             className={`tab${module === m.id ? ' active' : ''}`}
             onClick={() => setModule(m.id)}
           >
-            <span className="tab-icon">{m.icon}</span>
-            <span className="tab-label">{m.label}</span>
+            {m.short}
           </button>
         ))}
       </nav>
@@ -41,12 +43,12 @@ export function TopBar() {
         <button
           className="ghost-btn"
           onClick={() => setMapStyle(mapStyle === 'satellite' ? 'streets' : 'satellite')}
-          title="Toggle basemap"
+          title={`Basemap: ${mapStyle} — tap to switch`}
         >
-          {mapStyle === 'satellite' ? '🛰️' : '🗺️'}
+          <Icon name="layers" size={17} />
         </button>
         <button className="ghost-btn" onClick={() => setRightOpen(!rightOpen)} title="Toggle detail panel">
-          {rightOpen ? '⟩' : '⟨'}
+          <Icon name={rightOpen ? 'chevron-right' : 'chevron-left'} size={17} />
         </button>
       </div>
     </header>

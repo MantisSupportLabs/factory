@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { useApp } from '../state/store';
+import { Icon } from '../ui/icons';
 
 interface StarlinkItem {
   asset_id: number;
@@ -134,7 +135,7 @@ export default function ConnectivityPanel() {
           {site.starlink.map((s) => (
             <div key={s.asset_id} style={{ padding: '4px 0 10px', borderBottom: '1px solid var(--border)' }}>
               <div className="row-between" style={{ minHeight: 32 }}>
-                <span style={{ fontWeight: 600 }}>📡 {s.name}</span>
+                <span style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="antenna" size={14} /> {s.name}</span>
                 <span className={starlinkPill(s.status)}>{s.status}</span>
               </div>
               <div className="muted" style={{ fontSize: 12 }}>
@@ -177,7 +178,7 @@ export default function ConnectivityPanel() {
             <div key={g.asset_id} className="row-between" style={{ minHeight: 44, padding: '6px 0' }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  🌐 {g.name}
+                  <Icon name="globe" size={13} /> {g.name}
                 </div>
                 <div className="muted" style={{ fontSize: 12 }}>
                   {[g.model, g.wan ? `WAN ${g.wan}` : null].filter(Boolean).join(' · ') || 'gateway'}

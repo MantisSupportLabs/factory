@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { useApp } from '../state/store';
+import { Icon } from '../ui/icons';
 
 interface ToolOut {
   assignment_id: number;
@@ -152,7 +153,7 @@ export default function ToolsPanel() {
             role="button"
             onClick={() => useApp.getState().selectAsset(t.id)}
           >
-            <span className="row-icon">🧰</span>
+            <span className="row-icon"><Icon name="toolbox" /></span>
             <div className="row-main">
               <div className="row-title">{t.name}</div>
               <div className="row-sub">
