@@ -248,6 +248,11 @@ body {
   border: 1.5px solid var(--ring);
 }
 .asset-marker.selected .am-icon { box-shadow: 0 0 0 3px rgba(63, 198, 240, 0.5); }
+/* Regional zooms: drop labels and shrink badges so the map stays legible. */
+.map-wrap.zoomed-out .am-label { display: none; }
+.map-wrap.zoomed-out .asset-marker .am-icon { width: 22px; height: 22px; }
+.map-wrap.zoomed-out .asset-marker .am-icon svg { width: 11px; height: 11px; }
+.map-wrap.zoomed-out .site-chip { font-size: 8.5px; padding: 3px 6px; }
 .asset-marker .am-label {
   margin-top: 3px;
   font-size: 8.5px;

@@ -59,6 +59,68 @@ const STREET_STYLE: maplibregl.StyleSpecification = MAPBOX_TOKEN
   ? mapboxStyle('dark-v11')
   : rasterStyle(['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], 256, '© OpenStreetMap contributors');
 
+/**
+ * Offline demo basemap. The packaged snapshot demo runs inside sandboxes
+ * that block every external tile host, so instead of dead raster sources it
+ * gets a tactical graticule: real vector layers that pan and zoom with the
+ * camera (a static CSS backdrop is exactly what makes zooming feel broken).
+ */
+declare global {
+  interface Window {
+    __DIRTWORKS_SNAPSHOT__?: unknown;
+  }
+}
+const OFFLINE_DEMO = typeof window !== 'undefined' && !!window.__DIRTWORKS_SNAPSHOT__;
+
+function graticule(): GeoJSON.FeatureCollection {
+  const features: GeoJSON.Feature[] = [];
+  const [lngMin, lngMax, latMin, latMax] = [-98.4, -96.6, 32.3, 33.7];
+  const minor = 0.01;
+  const line = (coords: [number, number][], major: boolean) =>
+    features.push({
+      type: 'Feature',
+      properties: { major },
+      geometry: { type: 'LineString', coordinates: coords },
+    });
+  for (let lng = lngMin; lng <= lngMax + 1e-9; lng += minor) {
+    const v = Math.round(lng * 100);
+    line([[lng, latMin], [lng, latMax]], v % 5 === 0);
+  }
+  for (let lat = latMin; lat <= latMax + 1e-9; lat += minor) {
+    const v = Math.round(lat * 100);
+    line([[lngMin, lat], [lngMax, lat]], v % 5 === 0);
+  }
+  return { type: 'FeatureCollection', features };
+}
+
+function offlineStyle(): maplibregl.StyleSpecification {
+  return {
+    version: 8,
+    sources: { graticule: { type: 'geojson', data: graticule() } },
+    layers: [
+      { id: 'bg', type: 'background', paint: { 'background-color': '#0a1016' } },
+      {
+        id: 'grid-minor',
+        type: 'line',
+        source: 'graticule',
+        filter: ['==', ['get', 'major'], false],
+        minzoom: 11,
+        paint: { 'line-color': '#131f2e', 'line-width': 0.7 },
+      },
+      {
+        id: 'grid-major',
+        type: 'line',
+        source: 'graticule',
+        filter: ['==', ['get', 'major'], true],
+        paint: { 'line-color': '#1b2c40', 'line-width': 1 },
+      },
+    ],
+  };
+}
+
+/** Marker labels clutter the view at regional zooms — hide them early. */
+const LABEL_MIN_ZOOM = 10.8;
+
 const KIND_ICON: Record<string, IconName> = {
   machine: 'dozer',
   truck: 'truck',
@@ -93,13 +155,20 @@ export function MapView() {
     if (!containerRef.current || mapRef.current) return;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: SAT_STYLE,
+      style: OFFLINE_DEMO ? offlineStyle() : SAT_STYLE,
       center: [-97.41, 33.03],
       zoom: 10.3,
+      minZoom: 8,
+      maxZoom: 19,
       attributionControl: { compact: true },
     });
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), 'bottom-right');
     map.addControl(new maplibregl.ScaleControl({ unit: 'imperial' }), 'bottom-left');
+    const applyZoomClass = () => {
+      containerRef.current?.parentElement?.classList.toggle('zoomed-out', map.getZoom() < LABEL_MIN_ZOOM);
+    };
+    applyZoomClass();
+    map.on('zoom', applyZoomClass);
     map.on('click', (e) => {
       const { positionDropAssetId } = useApp.getState();
       if (positionDropAssetId != null) {
@@ -121,8 +190,9 @@ export function MapView() {
     };
   }, []);
 
-  /* Style switch. */
+  /* Style switch (no-op in the offline demo — there is only the grid). */
   useEffect(() => {
+    if (OFFLINE_DEMO) return;
     mapRef.current?.setStyle(mapStyle === 'satellite' ? SAT_STYLE : STREET_STYLE);
   }, [mapStyle]);
 
