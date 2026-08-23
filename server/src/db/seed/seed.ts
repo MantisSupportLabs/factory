@@ -21,7 +21,53 @@ export function seedIfNeeded(): void {
     console.log('[seed] creating demo tenant Summit DirtWorks & Paving');
     transaction(() => seed());
   }
+  const tenant = get<{ id: number }>(`SELECT id FROM tenants WHERE slug = ?`, config.defaultTenantSlug);
+  if (tenant) seedCrewsIfMissing(tenant.id);
   scheduleDemoOperatorAssignments();
+}
+
+/**
+ * Crews / PM / PE staffing for the demo tenant. Idempotent and additive so
+ * databases created before the crews feature pick it up on next boot.
+ */
+function seedCrewsIfMissing(t: number): void {
+  if (get<{ id: number }>(`SELECT id FROM crews WHERE tenant_id = ? LIMIT 1`, t)) return;
+  console.log('[seed] staffing crews, PMs and PEs');
+
+  const empByName = (name: string) =>
+    get<{ id: number }>(`SELECT id FROM employees WHERE tenant_id = ? AND name = ?`, t, name)?.id ?? null;
+  const addEmp = (name: string, role: string, phone: string) =>
+    Number(run(`INSERT INTO employees (tenant_id, name, role, phone) VALUES (?, ?, ?, ?)`, t, name, role, phone).lastInsertRowid);
+
+  // Front office: two PMs, two PEs.
+  const pmQuinn = empByName('Jordan Quinn') ?? addEmp('Jordan Quinn', 'pm', '817-555-0201');
+  const pmAvery = empByName('Sky Avery') ?? addEmp('Sky Avery', 'pm', '817-555-0202');
+  const peLopez = empByName('Ada Lopez') ?? addEmp('Ada Lopez', 'pe', '817-555-0203');
+  const peGrant = empByName('Micah Grant') ?? addEmp('Micah Grant', 'pe', '817-555-0204');
+
+  const site = (code: string) =>
+    get<{ id: number }>(`SELECT id FROM jobsites WHERE tenant_id = ? AND code = ?`, t, code)?.id ?? null;
+  const us287 = site('J-2401');
+  const bluestem = site('J-2407');
+  const eagleMtn = site('J-2410');
+
+  if (us287) run(`UPDATE jobsites SET pm_id = ?, pe_id = ? WHERE id = ?`, pmQuinn, peLopez, us287);
+  if (bluestem) run(`UPDATE jobsites SET pm_id = ?, pe_id = ? WHERE id = ?`, pmAvery, peGrant, bluestem);
+  if (eagleMtn) run(`UPDATE jobsites SET pm_id = ?, pe_id = ? WHERE id = ?`, pmQuinn, peGrant, eagleMtn);
+
+  const addCrew = (name: string, jobsite: number | null, foreman: number | null, members: string[]) => {
+    const crewId = Number(
+      run(`INSERT INTO crews (tenant_id, name, jobsite_id, foreman_id) VALUES (?, ?, ?, ?)`, t, name, jobsite, foreman).lastInsertRowid,
+    );
+    for (const m of members) {
+      const id = empByName(m);
+      if (id) run(`UPDATE employees SET crew_id = ? WHERE id = ?`, crewId, id);
+    }
+  };
+  addCrew('Dirt Crew 1', us287, empByName('Dale Briggs'), ['Dale Briggs', 'Elena Soto', 'Jimmy Cole', 'Nina Ortiz']);
+  addCrew('Dirt Crew 2', bluestem, null, ['Binh Tran', 'Sam Burke']);
+  addCrew('Pad Crew', eagleMtn, null, ['Walt Hayes']);
+  addCrew('Haul & Service', us287, null, ['Dana Price', 'Carlos Reyes']);
 }
 
 /**

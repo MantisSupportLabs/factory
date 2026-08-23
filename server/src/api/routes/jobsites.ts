@@ -15,7 +15,11 @@ export const jobsitesRouter = Router();
 
 jobsitesRouter.get('/jobsites', (req, res) => {
   const rows = all(
-    `SELECT * FROM jobsites WHERE tenant_id = ? ORDER BY name`,
+    `SELECT j.*, pm.name AS pm_name, pe.name AS pe_name
+     FROM jobsites j
+     LEFT JOIN employees pm ON pm.id = j.pm_id
+     LEFT JOIN employees pe ON pe.id = j.pe_id
+     WHERE j.tenant_id = ? ORDER BY j.name`,
     req.tenant.id,
   );
   res.json(rows);
@@ -97,6 +101,8 @@ jobsitesRouter.patch('/jobsites/:id', (req, res) => {
     boundary: (v) => (v === null ? null : typeof v === 'string' ? v : JSON.stringify(v)),
     start_date: (v) => (v === null ? null : String(v)),
     end_date: (v) => (v === null ? null : String(v)),
+    pm_id: (v) => (v === null ? null : Number(v)),
+    pe_id: (v) => (v === null ? null : Number(v)),
   };
   for (const [key, fn] of Object.entries(allow)) {
     if (key in b) { fields.push(`${key} = ?`); params.push(fn(b[key])); }

@@ -173,10 +173,24 @@ CREATE TABLE IF NOT EXISTS employees (
   id          INTEGER PRIMARY KEY,
   tenant_id   INTEGER NOT NULL REFERENCES tenants(id),
   name        TEXT NOT NULL,
-  role        TEXT NOT NULL,               -- operator|laborer|foreman|super|driver|mechanic|pm
+  role        TEXT NOT NULL,               -- operator|laborer|foreman|super|driver|mechanic|pm|pe
   phone       TEXT,
   certs       TEXT,                        -- JSON list
+  crew_id     INTEGER REFERENCES crews(id),
   active      INTEGER NOT NULL DEFAULT 1
+);
+
+-- Field crews. Members are employees with crew_id set; jobs get a PM and a
+-- PE on the jobsite row (pm_id / pe_id).
+CREATE TABLE IF NOT EXISTS crews (
+  id          INTEGER PRIMARY KEY,
+  tenant_id   INTEGER NOT NULL REFERENCES tenants(id),
+  name        TEXT NOT NULL,
+  jobsite_id  INTEGER REFERENCES jobsites(id),
+  foreman_id  INTEGER REFERENCES employees(id),
+  notes       TEXT,
+  created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  UNIQUE (tenant_id, name)
 );
 
 -- Small tool checkout/return.

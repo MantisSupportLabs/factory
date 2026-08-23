@@ -8,7 +8,7 @@ export type IconName =
   | 'pin' | 'dozer' | 'toolbox' | 'truck' | 'camera' | 'antenna' | 'spark'
   | 'file' | 'clock' | 'shield' | 'plug' | 'cog' | 'trailer' | 'layers'
   | 'chevron-left' | 'chevron-right' | 'chevron-down' | 'x' | 'printer' | 'check' | 'warning'
-  | 'crosshair' | 'globe' | 'cube' | 'mountain';
+  | 'crosshair' | 'globe' | 'cube' | 'mountain' | 'users' | 'gantt';
 
 const P: Record<IconName, string> = {
   pin: '<path d="M12 21c-4.2-4.6-6.3-7.9-6.3-10.6C5.7 6.9 8.5 4.2 12 4.2s6.3 2.7 6.3 6.2C18.3 13.1 16.2 16.4 12 21z"/><circle cx="12" cy="10.3" r="2.2"/>',
@@ -36,6 +36,8 @@ const P: Record<IconName, string> = {
   globe: '<circle cx="12" cy="12" r="8.4"/><path d="M3.6 12h16.8M12 3.6c3.1 2.6 3.1 14.2 0 16.8-3.1-2.6-3.1-14.2 0-16.8z"/>',
   cube: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/>',
   mountain: '<path d="M2.8 19.5 9.8 6l4.3 7.6 2.4-3.6 4.7 9.5z"/>',
+  users: '<circle cx="9" cy="8.2" r="3.2"/><path d="M3.5 19.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="16.8" cy="9" r="2.5"/><path d="M16.5 14.3c2.4.3 4 2 4 4.4"/>',
+  gantt: '<path d="M3.5 5.5h9M8 10h11M5.5 14.5h8M11 19h7.5"/>',
 };
 
 export function iconMarkup(name: IconName, size = 16): string {

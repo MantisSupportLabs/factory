@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from 'react';
 import { Icon } from './ui/icons';
 import { TopBar } from './layout/TopBar';
 import { AssetDetail } from './layout/AssetDetail';
+import { TimelineBar } from './layout/TimelineBar';
 import { MapView } from './map/MapView';
 import { PANELS } from './panels/registry';
 import { MODULES, WIDE_MODULES, useApp } from './state/store';
@@ -52,6 +53,7 @@ export default function App() {
 
       <main className="map-area">
         <MapView />
+        <TimelineBar />
         {isWide && wideOpen && (
           <div className="wide-drawer">
             <div className="wide-head">

@@ -16,6 +16,7 @@ import { workforceRouter } from './routes/workforce.js';
 import { safetyRouter } from './routes/safety.js';
 import { aiRouter } from './routes/ai.js';
 import { reportsRouter } from './routes/reports.js';
+import { crewsRouter } from './routes/crews.js';
 
 export function buildApiRouter(): Router {
   const api = Router();
@@ -39,6 +40,7 @@ export function buildApiRouter(): Router {
   api.use(safetyRouter);
   api.use(aiRouter);
   api.use(reportsRouter);
+  api.use(crewsRouter);
 
   return api;
 }

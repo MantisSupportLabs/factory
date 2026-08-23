@@ -106,6 +106,63 @@ export interface AiSetting {
   enabled: number;
 }
 
+export interface CrewMember {
+  id: number;
+  name: string;
+  role: string;
+  phone: string | null;
+  crew_id: number | null;
+  active: number;
+}
+
+export interface Crew {
+  id: number;
+  name: string;
+  jobsite_id: number | null;
+  foreman_id: number | null;
+  notes: string | null;
+  jobsite_name: string | null;
+  foreman_name: string | null;
+  members: CrewMember[];
+}
+
+export interface ScheduleActivity {
+  plan_id: number;
+  activity: string;
+  unit: string;
+  pct_complete: number;
+  planned_start: string | null;
+  planned_end: string | null;
+  days_variance: number | null;
+  at_risk: boolean;
+}
+
+export type ScheduleStatus = 'behind' | 'ahead' | 'on_track';
+
+export interface SchedulePhase {
+  phase: string;
+  start: string | null;
+  end: string | null;
+  pct_complete: number;
+  status: ScheduleStatus;
+  days_variance: number | null;
+  activities: ScheduleActivity[];
+}
+
+export interface SiteSchedule {
+  jobsite_id: number;
+  name: string;
+  code: string;
+  status: string;
+  pm_id: number | null;
+  pm_name: string | null;
+  pe_id: number | null;
+  pe_name: string | null;
+  schedule_status: ScheduleStatus;
+  days_variance: number | null;
+  phases: SchedulePhase[];
+}
+
 export interface AiInsight {
   id: number;
   jobsite_id: number | null;

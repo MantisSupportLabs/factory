@@ -518,6 +518,162 @@ label.field {
 .fault-desc { font-size: 12.5px; margin: 3px 0; }
 .fault-ts { font-size: 10.5px; color: var(--faint); }
 
+/* ---------- schedule timeline (bottom strip) ---------- */
+.timeline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 12;
+  background: rgba(11, 17, 27, 0.96);
+  border-top: 1px solid var(--line2);
+}
+.timeline-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 6px 0 12px;
+  min-height: 34px;
+}
+.timeline-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.timeline-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.timeline-legend .lg { width: 14px; height: 7px; display: inline-block; margin-left: 10px; }
+.lg-behind { background: rgba(229, 72, 77, 0.35); border: 1px solid var(--red); }
+.lg-ontrack { background: var(--bg3); border: 1px solid var(--line2); }
+.lg-ahead { background: rgba(55, 201, 139, 0.3); border: 1px solid var(--green); }
+.timeline-tip {
+  flex: 1;
+  text-align: right;
+  font-size: 10.5px;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.timeline-head .ghost-btn { margin-left: auto; min-height: 32px; }
+.timeline-tip + .ghost-btn { margin-left: 0; }
+.timeline-head svg.flip { transform: rotate(180deg); }
+.timeline.collapsed { background: rgba(11, 17, 27, 0.9); }
+
+.timeline-body { padding: 0 12px 10px; }
+.timeline-axis { position: relative; height: 16px; margin-left: 208px; }
+.timeline-axis .tick {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 8.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--faint);
+  border-left: 1px solid var(--line);
+  padding-left: 3px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.timeline-axis .today-flag {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(11, 17, 27, 0.95);
+  padding: 1px 4px;
+  z-index: 2;
+}
+.timeline-rows { position: relative; margin-left: 208px; }
+.today-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--accent);
+  opacity: 0.55;
+  z-index: 3;
+  pointer-events: none;
+}
+.timeline-row { display: flex; align-items: center; min-height: 30px; padding: 3px 0; }
+.timeline-label {
+  position: absolute;
+  left: -208px;
+  width: 196px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0;
+  min-height: 30px;
+  text-align: left;
+}
+.timeline-row { position: relative; }
+.tl-code { font-family: var(--mono); font-size: 10.5px; font-weight: 800; }
+.tl-name { flex: 1; font-size: 10px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-var { font-size: 9.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.tl-red { color: var(--red); }
+.tl-green { color: var(--green); }
+.timeline-track { position: relative; flex: 1; border-left: 1px solid var(--line); }
+.phase-bar {
+  position: absolute;
+  height: 17px;
+  border: 1px solid var(--line2);
+  background: var(--bg3);
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
+.phase-bar.st-behind { background: rgba(229, 72, 77, 0.16); }
+.phase-bar.st-ahead { background: rgba(55, 201, 139, 0.14); }
+.phase-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(63, 198, 240, 0.28);
+}
+.phase-bar.st-behind .phase-fill { background: rgba(229, 72, 77, 0.4); }
+.phase-bar.st-ahead .phase-fill { background: rgba(55, 201, 139, 0.35); }
+.phase-name {
+  position: relative;
+  display: block;
+  padding: 0 6px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+/* Map chips pick up schedule status. */
+.site-chip.behind { border-color: var(--red); color: var(--red); }
+.site-chip.ahead { border-color: var(--green); color: var(--green); }
+
 /* Tighter top bar below full desktop width. */
 @media (max-width: 1500px) {
   .brand-tenant { display: none; }

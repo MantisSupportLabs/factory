@@ -25,8 +25,26 @@ export function getDb(): DatabaseSync {
       ? path.join(here, 'schema.sql')
       : path.resolve(here, '../../src/db/schema.sql');
     db.exec(fs.readFileSync(schemaPath, 'utf8'));
+    migrate(db);
   }
   return db;
+}
+
+/**
+ * Additive column migrations for databases created before a schema change.
+ * schema.sql only CREATEs missing tables; new columns on existing tables
+ * are applied here.
+ */
+function migrate(d: DatabaseSync): void {
+  const ensureColumn = (table: string, column: string, ddl: string) => {
+    const cols = d.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === column)) {
+      d.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+    }
+  };
+  ensureColumn('employees', 'crew_id', 'crew_id INTEGER REFERENCES crews(id)');
+  ensureColumn('jobsites', 'pm_id', 'pm_id INTEGER REFERENCES employees(id)');
+  ensureColumn('jobsites', 'pe_id', 'pe_id INTEGER REFERENCES employees(id)');
 }
 
 export function all<T = Row>(sql: string, ...params: SqlParam[]): T[] {

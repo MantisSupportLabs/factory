@@ -15,6 +15,7 @@ export const PANELS: Record<ModuleId, LazyExoticComponent<ComponentType>> = {
   fleet: lazy(() => import('./FleetPanel')),
   cameras: lazy(() => import('./CamerasPanel')),
   connectivity: lazy(() => import('./ConnectivityPanel')),
+  crews: lazy(() => import('./CrewsPanel')),
   insights: lazy(() => import('./InsightsPanel')),
   reports: lazy(() => import('./ReportsPanel')),
   timecards: lazy(() => import('./TimecardsPanel')),

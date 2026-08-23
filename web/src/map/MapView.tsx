@@ -147,6 +147,7 @@ export function MapView() {
 
   const assets = useApp((s) => s.assets);
   const jobsites = useApp((s) => s.jobsites);
+  const schedule = useApp((s) => s.schedule);
   const mapStyle = useApp((s) => s.mapStyle);
   const selectedAssetId = useApp((s) => s.selectedAssetId);
 
@@ -231,8 +232,12 @@ export function MapView() {
       siteChipsRef.current.forEach((m) => m.remove());
       siteChipsRef.current = jobsites.map((j) => {
         const el = document.createElement('div');
-        el.className = 'site-chip';
-        el.textContent = j.name;
+        const sched = useApp.getState().schedule.find((s) => s.jobsite_id === j.id);
+        const statusClass =
+          sched?.schedule_status === 'behind' ? ' behind' : sched?.schedule_status === 'ahead' ? ' ahead' : '';
+        el.className = `site-chip${statusClass}`;
+        el.textContent =
+          j.name + (sched?.schedule_status === 'behind' && sched.days_variance ? ` · +${sched.days_variance}D` : '');
         el.onclick = (ev) => {
           ev.stopPropagation();
           useApp.getState().selectJobsite(j.id);
@@ -254,7 +259,7 @@ export function MapView() {
     return () => {
       map.off('styledata', draw);
     };
-  }, [jobsites, mapStyle]);
+  }, [jobsites, mapStyle, schedule]);
 
   /* Asset markers. */
   useEffect(() => {

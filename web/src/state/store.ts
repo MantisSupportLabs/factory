@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AssetStateRow, Jobsite } from '../api/types';
+import type { AssetStateRow, Jobsite, SiteSchedule } from '../api/types';
 import { api } from '../api/client';
 import type { IconName } from '../ui/icons';
 
@@ -10,6 +10,7 @@ export type ModuleId =
   | 'fleet'
   | 'cameras'
   | 'connectivity'
+  | 'crews'
   | 'insights'
   | 'reports'
   | 'timecards'
@@ -36,9 +37,14 @@ interface AppState {
   /** Live data polled by App. */
   assets: AssetStateRow[];
   jobsites: Jobsite[];
+  schedule: SiteSchedule[];
   lastPollAt: string | null;
   pollError: string | null;
   refresh: () => Promise<void>;
+
+  /** Bottom schedule timeline strip. */
+  timelineOpen: boolean;
+  setTimelineOpen: (open: boolean) => void;
 
   /** Bumped after any mutation so open panels refetch. */
   dataVersion: number;
@@ -70,19 +76,24 @@ export const useApp = create<AppState>((set, get) => ({
 
   assets: [],
   jobsites: [],
+  schedule: [],
   lastPollAt: null,
   pollError: null,
   refresh: async () => {
     try {
-      const [assets, jobsites] = await Promise.all([
+      const [assets, jobsites, schedule] = await Promise.all([
         api.get<AssetStateRow[]>('/assets/state'),
         api.get<Jobsite[]>('/jobsites'),
+        api.get<SiteSchedule[]>('/schedule'),
       ]);
-      set({ assets, jobsites, lastPollAt: new Date().toISOString(), pollError: null });
+      set({ assets, jobsites, schedule, lastPollAt: new Date().toISOString(), pollError: null });
     } catch (err) {
       set({ pollError: (err as Error).message });
     }
   },
+
+  timelineOpen: true,
+  setTimelineOpen: (open) => set({ timelineOpen: open }),
 
   dataVersion: 0,
   bumpVersion: () => set({ dataVersion: get().dataVersion + 1 }),
@@ -95,7 +106,7 @@ export const useApp = create<AppState>((set, get) => ({
 }));
 
 /** Modules whose panel opens as a wide drawer over the map. */
-export const WIDE_MODULES = new Set<ModuleId>(['insights', 'reports', 'timecards', 'safety', 'connectors']);
+export const WIDE_MODULES = new Set<ModuleId>(['crews', 'insights', 'reports', 'timecards', 'safety', 'connectors']);
 
 export interface ModuleDef {
   id: ModuleId;
@@ -117,7 +128,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
   { id: 'assets', label: 'Assets', items: ['equipment', 'fleet', 'tools'] },
   { id: 'sitetech', label: 'Site Tech', items: ['cameras', 'connectivity'] },
   { id: 'intel', label: 'Intel', items: ['insights', 'reports'] },
-  { id: 'office', label: 'Office', items: ['timecards', 'safety'] },
+  { id: 'office', label: 'Office', items: ['crews', 'timecards', 'safety'] },
   { id: 'oem', label: 'OEM', items: ['connectors'] },
 ];
 
@@ -128,6 +139,7 @@ export const MODULES: ModuleDef[] = [
   { id: 'fleet', label: 'Truck Fleet', short: 'Fleet', icon: 'truck' },
   { id: 'cameras', label: 'Cameras', short: 'Cameras', icon: 'camera' },
   { id: 'connectivity', label: 'Connectivity', short: 'Network', icon: 'antenna' },
+  { id: 'crews', label: 'Crews & Staffing', short: 'Crews', icon: 'users' },
   { id: 'insights', label: 'AI Insights', short: 'AI', icon: 'spark' },
   { id: 'reports', label: 'Reports', short: 'Reports', icon: 'file' },
   { id: 'timecards', label: 'Timecards', short: 'Timecards', icon: 'clock' },
