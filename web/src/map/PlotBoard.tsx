@@ -236,6 +236,13 @@ export function PlotBoard() {
     }
   };
   const onPointerMove = (e: React.PointerEvent) => {
+    // A mouse with no button held can never be mid-pan. Children that
+    // stopPropagation on pointerup could otherwise leave a stale entry that
+    // glues the map to the cursor.
+    if (e.pointerType === 'mouse' && e.buttons === 0) {
+      if (pointers.current.size) pointers.current.clear();
+      return;
+    }
     const prev = pointers.current.get(e.pointerId);
     if (!prev || !view) return;
     const dx = e.clientX - prev.x;
@@ -253,8 +260,12 @@ export function PlotBoard() {
       }
     }
   };
-  const onPointerUp = (e: React.PointerEvent) => {
+  /** Capture phase: runs before children can stopPropagation, so the
+   *  pointer is always released even when a chip/marker handles the tap. */
+  const onPointerUpCapture = (e: React.PointerEvent) => {
     pointers.current.delete(e.pointerId);
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
     if (pointers.current.size === 0 && !gesture.current.moved) {
       // Treat as a tap: manual position drop when armed.
       const { positionDropAssetId } = useApp.getState();
@@ -420,8 +431,9 @@ export function PlotBoard() {
       className={`plotboard${zoomedOut ? ' zoomed-out' : ''}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
+      onPointerUpCapture={onPointerUpCapture}
       onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      onPointerCancel={() => pointers.current.clear()}
       onWheel={onWheel}
       onDoubleClick={onDoubleClick}
     >

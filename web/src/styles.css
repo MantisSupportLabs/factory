@@ -670,6 +670,52 @@ label.field {
   text-align: left;
 }
 
+/* Schedule click-to-edit sheet */
+.sched-editor {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  max-height: 48vh;
+  overflow-y: auto;
+  background: var(--bg1);
+  border-top: 1px solid var(--accent);
+  border-bottom: 1px solid var(--line2);
+  box-shadow: 0 -14px 34px rgba(0, 0, 0, 0.55);
+  padding: 12px 16px 16px;
+  z-index: 14;
+}
+.se-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.se-table input { min-height: 36px; padding: 4px 8px; font-size: 12.5px; min-width: 56px; }
+.se-table td { padding: 5px 6px; }
+.se-table { display: block; overflow-x: auto; }
+.se-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.se-add input { min-height: 40px; padding: 6px 10px; font-size: 12.5px; width: auto; }
+.tl-add {
+  position: absolute;
+  left: -26px;
+  width: 22px;
+  min-height: 22px;
+  border: 1px solid var(--line2);
+  background: var(--bg2);
+  color: var(--dim);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 2;
+}
+.tl-add:active { color: var(--accent); border-color: var(--accent); }
+
 /* Map chips pick up schedule status. */
 .site-chip.behind { border-color: var(--red); color: var(--red); }
 .site-chip.ahead { border-color: var(--green); color: var(--green); }

@@ -245,6 +245,46 @@ crewsRouter.get('/schedule', (req, res) => {
   res.json(out);
 });
 
+crewsRouter.patch('/schedule/plans/:id', (req, res) => {
+  const t = req.tenant.id;
+  const id = Number(req.params.id);
+  if (!get(`SELECT id FROM production_plans WHERE tenant_id = ? AND id = ?`, t, id)) {
+    res.status(404).json({ error: 'plan not found' });
+    return;
+  }
+  const b = req.body as Record<string, unknown>;
+  const fields: string[] = [];
+  const params: (string | number | null)[] = [];
+  const allow: Record<string, (v: unknown) => string | number | null> = {
+    phase: (v) => String(v),
+    activity: (v) => String(v),
+    unit: (v) => String(v),
+    planned_qty: (v) => Number(v),
+    planned_hours: (v) => Number(v),
+    planned_start: (v) => (v === null ? null : String(v)),
+    planned_end: (v) => (v === null ? null : String(v)),
+  };
+  for (const [key, fn] of Object.entries(allow)) {
+    if (key in b) { fields.push(`${key} = ?`); params.push(fn(b[key])); }
+  }
+  if (fields.length === 0) { res.status(400).json({ error: 'no editable fields supplied' }); return; }
+  params.push(id);
+  run(`UPDATE production_plans SET ${fields.join(', ')} WHERE id = ?`, ...params);
+  res.json(get(`SELECT * FROM production_plans WHERE id = ?`, id));
+});
+
+crewsRouter.delete('/schedule/plans/:id', (req, res) => {
+  const t = req.tenant.id;
+  const id = Number(req.params.id);
+  if (!get(`SELECT id FROM production_plans WHERE tenant_id = ? AND id = ?`, t, id)) {
+    res.status(404).json({ error: 'plan not found' });
+    return;
+  }
+  run(`DELETE FROM production_entries WHERE plan_id = ?`, id);
+  run(`DELETE FROM production_plans WHERE id = ?`, id);
+  res.json({ ok: true });
+});
+
 crewsRouter.post('/schedule/phases', (req, res) => {
   const t = req.tenant.id;
   const b = req.body as {
