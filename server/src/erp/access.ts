@@ -178,11 +178,16 @@ export function canAccess(role: AccessRole, method: string, path: string, body: 
   if (path === '/auth/session' || path === '/auth/logout' || path === '/health') return true;
   if (matches(path, [/^\/auth\//, /^\/erp\/(audit|backups?|data-export)(\/|$)/, /^\/(credentials|connectors|ingestion)(\/|$)/, /^\/ai\/settings(\/|$)/])) return false;
   if (method === 'GET' || method === 'HEAD') {
+    if (/^\/erp\/(estimating|estimates)(\/|$)/.test(path)) return role === 'pm' || role === 'accountant';
     if (matches(path, [/^\/erp\/(rates|costing|payroll|payroll-export|billing|invoices|financials|integrations)(\/|$)/])) return role === 'pm' || role === 'accountant';
     return matches(path, [/^\/erp\/(overview|commercial|procurement|workforce-planning|certifications|project-finance|equipment-operations|projects|people|crews|assignments|work-items|daily-reports|cost-entries|weekly-updates|purchase-orders|controls|labor|time|equipment|dispatch|documents|safety|operations|execution|financial)(\/|$)/,
       /^\/(employees|timecards|assets|faults|jobsites|tools|safety|reports|fleet|connectivity|cameras)(\/|$)/, /^\/ai\/(insights|projections)$/]);
   }
   if (!WRITE_METHODS.has(method)) return false;
+  if (/^\/erp\/estimates(?:\/\d+)?$/.test(path)) return ['pm','accountant'].includes(role) && ['POST','PATCH'].includes(method);
+  if (/^\/erp\/estimates\/\d+\/approve$/.test(path)) return role === 'accountant' && method === 'POST';
+  if (/^\/erp\/estimates\/\d+\/revise$/.test(path)) return ['pm','accountant'].includes(role) && method === 'POST';
+  if (/^\/erp\/estimates\/\d+\/handover$/.test(path)) return role === 'pm' && method === 'POST';
   // Legacy timecards can approve via PATCH status, so check the payload as well as action paths.
   if (matches(path, [/^\/timecards(?:\/\d+)?$/]) && ['POST','PATCH'].includes(method)) {
     if (role === 'foreman' && method === 'PATCH') {

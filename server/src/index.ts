@@ -23,6 +23,7 @@ import { initializeProcurement } from './erp/procurement.js';
 import { initializeDocuments } from './erp/documents.js';
 import { initializeAccess, accessMiddleware, authorizationMiddleware, auditMiddleware } from './erp/access.js';
 import { initializeProjectFinance } from './erp/project-finance.js';
+import { initializeEstimatingSchema } from './erp/estimating.js';
 
 getDb();
 registerAllConnectors();
@@ -33,6 +34,7 @@ initializeEquipmentOperations();
 initializeProcurement();
 initializeDocuments();
 initializeProjectFinance();
+initializeEstimatingSchema();
 initializeAccess();
 startIngestionService();
 startAiScheduler();

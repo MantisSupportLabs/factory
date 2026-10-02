@@ -24,6 +24,7 @@ import { equipmentOperationsRouter } from './routes/equipment-operations.js';
 import { procurementRouter } from './routes/procurement.js';
 import { documentsRouter } from './routes/documents.js';
 import { projectFinanceRouter } from './routes/project-finance.js';
+import { estimatingRouter } from './routes/estimating.js';
 
 export function buildApiRouter(): Router {
   const api = Router();
@@ -55,6 +56,7 @@ export function buildApiRouter(): Router {
   api.use(procurementRouter);
   api.use(documentsRouter);
   api.use(projectFinanceRouter);
+  api.use(estimatingRouter);
 
   return api;
 }
