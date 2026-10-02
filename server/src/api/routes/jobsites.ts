@@ -10,6 +10,9 @@
 
 import { Router } from 'express';
 import { all, get, nowIso, run } from '../../db/database.js';
+import { getErpOverview } from '../../erp/overview.js';
+import { assertProjectStatusEdit } from '../../erp/project-state.js';
+import { ErpError } from '../../erp/validation.js';
 
 export const jobsitesRouter = Router();
 
@@ -83,9 +86,14 @@ jobsitesRouter.get('/jobsites/:id', (req, res) => {
 jobsitesRouter.patch('/jobsites/:id', (req, res) => {
   const t = req.tenant.id;
   const id = Number(req.params.id);
-  const existing = get<{ id: number }>(`SELECT id FROM jobsites WHERE tenant_id = ? AND id = ?`, t, id);
+  const existing = get<{ id: number; status: string }>(`SELECT id,status FROM jobsites WHERE tenant_id = ? AND id = ?`, t, id);
   if (!existing) { res.status(404).json({ error: 'jobsite not found' }); return; }
   const b = req.body as Record<string, unknown>;
+  try { assertProjectStatusEdit(t,id,existing.status,b.status); }
+  catch(error) {
+    if(error instanceof ErpError) {res.status(error.status).json({error:error.message});return;}
+    throw error;
+  }
   const fields: string[] = [];
   const params: (string | number | null)[] = [];
   const allow: Record<string, (v: unknown) => string | number | null> = {
@@ -112,19 +120,21 @@ jobsitesRouter.get('/jobsites/:id/plans', (req, res) => {
     id: number; tenant_id: number; jobsite_id: number; phase: string; activity: string;
     unit: string; planned_qty: number; planned_hours: number;
     planned_start: string | null; planned_end: string | null;
-    actual_qty: number; actual_hours: number;
   }
+  const actuals = new Map(getErpOverview(req.tenant.id).work_items.map((item) => [item.id, item]));
   const rows = all<PlanRow>(
-    `SELECT p.*, COALESCE(SUM(e.qty), 0) AS actual_qty, COALESCE(SUM(e.hours), 0) AS actual_hours
-     FROM production_plans p
-     LEFT JOIN production_entries e ON e.plan_id = p.id
+    `SELECT p.* FROM production_plans p
      WHERE p.tenant_id = ? AND p.jobsite_id = ?
-     GROUP BY p.id
      ORDER BY p.phase, p.activity`,
     req.tenant.id, Number(req.params.id),
   );
   res.json(rows.map((r) => {
-    const pct = r.planned_qty > 0 ? Math.min(100, (r.actual_qty / r.planned_qty) * 100) : 0;
-    return { ...r, pct_complete: Math.round(pct * 10) / 10 };
+    const measured = actuals.get(r.id);
+    // Share accepted quantities with the ERP; engine-hour drafts remain separate.
+    return {
+      ...r, actual_qty: measured?.actual_qty ?? 0, actual_hours: measured?.actual_hours ?? 0,
+      pct_complete: Math.round((measured?.progress_pct ?? 0) * 10) / 10,
+      actuals_basis: 'approved_reports_and_manual_field_entries',
+    };
   }));
 });

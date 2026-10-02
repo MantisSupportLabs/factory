@@ -16,9 +16,18 @@ import { workforceRouter } from './routes/workforce.js';
 import { safetyRouter } from './routes/safety.js';
 import { aiRouter } from './routes/ai.js';
 import { reportsRouter } from './routes/reports.js';
+import { erpRouter } from './routes/erp.js';
+import { commercialRouter } from './routes/commercial.js';
+import { accessRouter } from './routes/access.js';
+import { workforcePlanningRouter } from './routes/workforce-planning.js';
+import { equipmentOperationsRouter } from './routes/equipment-operations.js';
+import { procurementRouter } from './routes/procurement.js';
+import { documentsRouter } from './routes/documents.js';
+import { projectFinanceRouter } from './routes/project-finance.js';
 
 export function buildApiRouter(): Router {
   const api = Router();
+  api.use(accessRouter);
 
   api.get('/health', (_req, res) => {
     res.json({ ok: true, service: 'dirtworks-server', time: new Date().toISOString() });
@@ -39,6 +48,13 @@ export function buildApiRouter(): Router {
   api.use(safetyRouter);
   api.use(aiRouter);
   api.use(reportsRouter);
+  api.use(erpRouter);
+  api.use(commercialRouter);
+  api.use(workforcePlanningRouter);
+  api.use(equipmentOperationsRouter);
+  api.use(procurementRouter);
+  api.use(documentsRouter);
+  api.use(projectFinanceRouter);
 
   return api;
 }

@@ -7,8 +7,11 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test tests/*.test.mjs",
     "start": "node --no-warnings dist/index.js",
-    "seed": "tsx src/db/seed/run-seed.ts"
+    "seed": "tsx src/db/seed/run-seed.ts",
+    "backup": "node scripts/backup.mjs",
+    "restore": "node scripts/restore.mjs"
   },
   "dependencies": {
     "express": "^4.21.2"
