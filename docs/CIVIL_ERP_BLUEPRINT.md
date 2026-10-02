@@ -1,6 +1,6 @@
 # DirtWorks civil construction ERP blueprint
 
-Research and implementation review: October 2, 2026. The operations foundation and the next workforce, equipment, commercial, planning, billing and access phases are implemented. The remaining enterprise scope is identified below.
+Research and implementation review: October 2, 2026. The operations foundation and the workforce, equipment, commercial, planning, billing, access and estimating phases are implemented. The remaining enterprise scope is identified below.
 
 ## The 30,000-foot view
 
@@ -23,7 +23,7 @@ flowchart LR
 
 | Lifecycle stage | Working implementation | Further scope |
 |---|---|---|
-| Estimate and bid | Work targets and project budgets can be entered | Takeoff, bid assemblies, quotes, risk and estimate-to-job handover |
+| Estimate and bid | Referenced takeoff, resource rates/quote evidence, allowances/markup, frozen bid revisions and new-job award handover | Drawing measurement, reusable company rate/assembly libraries, quote comparisons and negotiated award revisions |
 | Contract and baseline | Client/PM/contract/budget, work targets, baseline snapshots, calendars, dependencies and pay items | Contract master, stations/work fronts, schedule/resource calculation and SOV amendments |
 | Resource planning | Daily crew dispatch, qualification checks, historical rosters, timed equipment reservations and accepted transfers | Timed crew splitting, leave, rentals and longer-range capacity planning |
 | Field execution | Quantity reports, split worker time, haul/safety tools, document/ticket uploads and queued daily drafts | Asset usage allocations, quality/test workflows and full offline editing |
@@ -53,6 +53,7 @@ The app extends the original jobs/assets database; it does not maintain a separa
 
 | Domain | Working records and relationships |
 |---|---|
+| Estimating | Bid family → editable revision with takeoff/resource assumptions → frozen approved bid → signed award → one new project and mapped work/pay items |
 | Jobs and work | Job profile → work items/codes/quantity-hour-budget targets → approved baseline snapshots → signed changes |
 | People and crews | Employee → current membership plus dated roster history → frozen assignment members and dated qualifications |
 | Time | Employee/job/code/date interval → paid hours → confirmed wage/burden snapshot → unique cost posting → additive void record |
@@ -80,6 +81,18 @@ The requested rough-completion form is **Weekly PM updates**, independent of dai
 A 40% assessment followed by 45% means the latest estimate is 45%. It never creates installed quantity. Earlier weeks remain; correcting the same week's entry updates that record. The access audit records the mutation, but a full before/after weekly revision record is future work. The indicated PM is business responsibility; authenticated author/reviewer attribution comes from the session.
 
 ## Evidence and financial boundaries
+
+### Estimate, bid and opening job budget
+
+**Estimating & bids** prepares scope before a project exists. Manual quantities retain a source reference; dimensional takeoff uses feet and explicit counts. Length produces LF, area produces SF or SY, and volume produces CY. TON and LS require manual quantity; no density or cross-unit conversion is assumed. This is entered takeoff arithmetic, not automatic measurement of uploaded drawings.
+
+Each scope line has a unique cost code, phase and installed unit. Resource usage per installed unit, waste allowance and unit rate produce separate labor, equipment, material, subcontract and other cost components. Labor/equipment resources use hours; quantities with different installed units remain separate. A supplier quote reference/vendor/validity documents the selected component rate without adding a second expense. These bid rates are assumptions and do not grant access to personal payroll rates.
+
+Component extensions round to cents before rollup. Overhead applies to direct cost; contingency applies to direct cost plus overhead; markup applies to that resulting cost budget. Markup on cost differs from margin on selling value. Allowances are allocated deterministically so line budgets sum exactly to the project budget and line selling values sum exactly to the bid. Authoritative selling values are cents; a displayed rounded unit price does not reconstruct them.
+
+PMs and accountants prepare estimates; accountants, owners and administrators approve them. Approval freezes quantities, rates, evidence, assumptions and totals. Optimistic edit versions prevent stale saves. A revision creates another draft and retains its approved predecessor. A newer draft or approved revision prevents award handover from an older revision.
+
+PM handover requires signed award evidence, an award date within the approved bid/quote validity, an active PM and project dates. It creates one new planned job per bid family, with work targets, cost-code budgets, mapped billing pay items, source links and a **draft baseline** for separate finance review. Identical retries return the original handover. It cannot overwrite an existing job or create installed work, actual cost, stock or payments. Existing-job scope changes follow the signed change workflow. Award values currently equal the approved bid; negotiations require a revised bid before handover. Tax, legal invoice formatting and multiple currencies remain outside this phase.
 
 ### Accepted field facts and corrections
 
@@ -123,7 +136,7 @@ Document revisions retain metadata and bytes with a SHA256 check; allowed PDF/im
 
 | Area | Next work |
 |---|---|
-| Estimating | Takeoff, assemblies, rate assumptions, bid quotes and estimate handover |
+| Estimating | Drawing-based measurement, reusable company assemblies/rate libraries, quote comparison, negotiated awards and estimate feedback |
 | Workforce | Leave/availability, interval crew assignments, employee-user links, union/prevailing-wage rules and payroll classifications |
 | Equipment | Rentals, ownership/operating rates, asset-specific usage reconciliation and parts stock |
 | Commercial | Subcontracts, returns/stock reallocation, procurement credits/reversals, contract administration and RFI responses |
@@ -148,5 +161,7 @@ The following public upstream Frappe/ERPNext sources were retrieved and read on 
 | [ERPNext Asset Maintenance Task schema](https://github.com/frappe/erpnext/blob/version-15/erpnext/assets/doctype/asset_maintenance_task/asset_maintenance_task.json) | Preventive/calibration tasks have periodicity, owner, due/completion dates and certificate requirements. Fleet availability needs more than a fault alert. |
 | [ERPNext Budget schema](https://github.com/frappe/erpnext/blob/version-15/erpnext/accounts/doctype/budget/budget.json) | Project/cost-center budgets distinguish material request, PO and actual expenditure controls. Commitments and actuals must stay separate. |
 | [ERPNext Purchase Order Item schema](https://github.com/frappe/erpnext/blob/version-15/erpnext/buying/doctype/purchase_order_item/purchase_order_item.json) | Ordered, received and billed quantities, units, required dates and project/cost-center links support item-level procurement. Whole-order receipt is only a first increment. |
+| [ERPNext Quotation implementation](https://github.com/frappe/erpnext/blob/version-15/erpnext/selling/doctype/quotation/quotation.py) and [item schema](https://github.com/frappe/erpnext/blob/version-15/erpnext/selling/doctype/quotation_item/quotation_item.json) | Submitted source documents, validity checks, source-row links and separate quantity/UOM/rate/amount inform frozen bids and one-time award mapping. |
+| [ERPNext Sales Order implementation](https://github.com/frappe/erpnext/blob/version-15/erpnext/selling/doctype/sales_order/sales_order.py) and [BOM costing](https://github.com/frappe/erpnext/blob/version-15/erpnext/manufacturing/doctype/bom/bom.py) | Source/UOM consistency, submitted-order project creation, time multiplied by hourly rates and component cost rollups inform estimate-to-job handover and civil resource costing. |
 
 Construction vendor/government pages from HCSS, Procore and FHWA could not be retrieved under this environment's network policy, so no claims above rely on them as reviewed sources. The next discovery round should validate the proposed workflows with the contractor's actual job logs, cost codes, estimate/contract forms, payroll rules, equipment practices and accounting exports.

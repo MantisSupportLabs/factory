@@ -35,6 +35,7 @@ import { Procurement } from "./Procurement";
 import { Documents, OfflineCenter, BusinessExport } from "./Documents";
 import { AccessSettings, useAccess } from "./Access";
 import { Forecasts, Billing } from "./ProjectFinance";
+import { Estimating } from "./Estimating";
 import { useCanEdit } from "./permissions";
 import "./erp.css";
 const FieldApp = lazy(() => import("../FieldApp"));
@@ -53,6 +54,7 @@ type View =
   | "reports"
   | "map";
 type PhaseView =
+  | "estimating"
   | "workforce-planning"
   | "equipment-operations"
   | "procurement"
@@ -76,6 +78,7 @@ const nav: Array<{
   },
   { id: "projects", label: "Projects", icon: "project" },
   { id: "weekly", label: "Weekly PM updates", icon: "weekly" },
+  { id: "estimating", label: "Estimating & bids", icon: "costs" },
   { id: "people", label: "People", icon: "people", group: "FIELD OPERATIONS" },
   { id: "crews", label: "Crews", icon: "crew" },
   { id: "dispatch", label: "Dispatch board", icon: "dispatch" },
@@ -228,6 +231,7 @@ const latest = (data: ERPData, id: number) =>
 export default function ERPShell() {
   const [view, setView] = useState<WorkspaceView>("overview");
   const access = useAccess();
+  const canViewEstimating = useCanEdit("pm", "accountant");
   const refreshAccess = access.refresh;
   const [draftCount, setDraftCount] = useState(offlineDrafts().length);
   const [data, setData] = useState<ERPData>(emptyERP);
@@ -335,6 +339,7 @@ export default function ERPShell() {
         </div>
         <nav aria-label="Main navigation">
           {nav
+            .filter((n) => n.id !== "estimating" || canViewEstimating)
             .filter(
               (n) =>
                 n.id !== "access" ||
@@ -499,6 +504,9 @@ export default function ERPShell() {
                 />
               )}
               {view === "weekly" && <Weekly data={data} refresh={refresh} />}
+              {view === "estimating" && canViewEstimating && (
+                <Estimating data={data} refresh={refresh} />
+              )}
               {(view === "people" ||
                 view === "crews" ||
                 view === "dispatch") && (

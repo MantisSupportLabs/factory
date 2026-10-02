@@ -8,6 +8,7 @@ The app now includes the next development phases described in the [civil ERP blu
 
 | Module | Behavior |
 |---|---|
+| Estimating and bid handover | Referenced manual or foot-based takeoff, resource usage/rates and quote evidence, separate overhead/contingency/markup, frozen approved revisions, and one-time award handover into a new planned job, cost codes, billing items and draft baseline |
 | Portfolio and projects | Jobs, client, PM ownership across multiple jobs, superintendent, contract/budget, dates, coordinates, measured progress and risks |
 | Weekly PM updates | Weekly estimated completion, finish/final-cost forecast, health, blockers and next-week plan; PM estimates stay separate from measured work |
 | People, crews and dispatch | Employee register, crew membership history, frozen dispatched rosters, one crew assignment per day, cross-crew worker conflict checks, required qualifications valid on the assignment date |
@@ -53,7 +54,7 @@ npm run typecheck
 npm test --workspace=server
 ```
 
-Tests use isolated databases and cover approval/reversal totals, split-time privacy and conflicts, equipment availability, inventory/AP matching, forecasting/billing/retainage, tenant/role denials, document revisions and host recovery.
+Tests use isolated databases and cover estimating/takeoff and award handover, approval/reversal totals, split-time privacy and conflicts, equipment availability, inventory/AP matching, forecasting/billing/retainage, tenant/role denials, document revisions and host recovery.
 
 ## Secure company access
 
@@ -67,7 +68,7 @@ The audit records successful API mutations, account identity, route, record ID w
 
 The Summit DirtWorks & Paving demo has three North Texas jobs, two PMs, crews, assets, tools, production plans, opening cost balances and sample commercial records. Customers, quantities and costs are illustrative. Six OEM transports use simulated feeds; camera/network status and heuristic estimates also remain simulated. America/Chicago defines ERP business dates.
 
-Remaining major work includes estimating/takeoff, subcontract administration, inventory returns/reallocation, procurement credit/reversal workflows, rentals and equipment ownership costing, leave and multi-job timed crew dispatch, drawing markup/quality testing, schedule/resource calculation, payroll rules/taxes, GL/accounting exports and reconciliation, credit notes/SOV amendments, weekly-update before/after revisions, and real OEM/accounting integrations. Final acceptance intentionally freezes new work; a formal reopening workflow is still needed.
+Remaining major work includes drawing-based digital takeoff, reusable company estimate/rate libraries and quote comparison, subcontract administration, inventory returns/reallocation, procurement credit/reversal workflows, rentals and equipment ownership costing, leave and multi-job timed crew dispatch, drawing markup/quality testing, schedule/resource calculation, payroll rules/taxes, GL/accounting exports and reconciliation, credit notes/SOV amendments, weekly-update before/after revisions, and real OEM/accounting integrations. Final acceptance intentionally freezes new work; a formal reopening workflow is still needed.
 
 Offline support covers new daily drafts on the device, with an application shell cache in built deployments. It does not provide offline editing of every module, cached authenticated job datasets, background approval, or attachment upload. Device storage is lost when browser data is cleared. Baselines/calendars/dependencies are stored and reviewed; they do not yet produce a full critical-path or resource-loaded schedule.
 
@@ -93,4 +94,4 @@ SQLite supports this local implementation. Shared production deployment still ne
 - [Civil ERP blueprint](docs/CIVIL_ERP_BLUEPRINT.md): lifecycle, evidence rules, researched design basis and remaining roadmap.
 - [Backup and recovery](docs/BACKUP_RECOVERY.md): consistent database/files archive and verified isolated restore.
 - [Architecture](docs/ARCHITECTURE.md): existing telematics model and connector pipeline.
-- ERP route modules: `server/src/api/routes/erp.ts`, `workforce-planning.ts`, `equipment-operations.ts`, `procurement.ts`, `project-finance.ts`, `documents.ts`, and `access.ts`.
+- ERP route modules: `server/src/api/routes/erp.ts`, `estimating.ts`, `workforce-planning.ts`, `equipment-operations.ts`, `procurement.ts`, `project-finance.ts`, `documents.ts`, and `access.ts`.

@@ -1993,12 +1993,16 @@
     width: 100%;
   }
 }
+.erp-shell input[type="text"],
+.erp-shell input[type="number"],
 .erp-shell input[type="date"],
 .erp-shell input[type="time"] {
   background: #fff;
   color: #354453;
   color-scheme: light;
 }
+.field-view .app input[type="text"],
+.field-view .app input[type="number"],
 .field-view .app input[type="date"],
 .field-view .app input[type="time"] {
   background: #1d2832;
