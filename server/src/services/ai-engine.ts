@@ -9,6 +9,8 @@
  */
 
 import { all, get, nowIso, run } from '../db/database.js';
+import { getErpOverview } from '../erp/overview.js';
+import { businessDate } from '../erp/calendar.js';
 
 export interface AiRunStats {
   insightsCreated: number;
@@ -27,8 +29,12 @@ export interface ProjectionRow {
   planned_hours: number;
   actual_qty: number;
   actual_hours: number;
+  actuals_basis: 'approved_reports_and_manual_field_entries';
   pct_complete: number;
   rate_qty_per_day: number;
+  recorded_production_days: number;
+  projection_as_of_date: string;
+  projection_basis: string;
   projected_finish: string | null;
   planned_end: string | null;
   days_variance: number | null;
@@ -134,14 +140,17 @@ function runProductionAuto(tenantId: number, today: string, deltas: Map<number, 
     // UNIQUE(plan_id, date, source): insert once, then refresh today's numbers
     // unless the field corrected the row (corrected=1 wins).
     run(
-      `INSERT OR IGNORE INTO production_entries (tenant_id, plan_id, date, qty, hours, source)
-       VALUES (?, ?, ?, ?, ?, 'ai_auto')`,
+      `INSERT OR IGNORE INTO production_entries (tenant_id, plan_id, date, qty, hours, source, notes)
+       VALUES (?, ?, ?, ?, ?, 'ai_auto', ?)`,
       tenantId, p.id, today, qty, hours,
+      'Telemetry estimate from engine hours and planned rate; installed quantity must be measured in the field.',
     );
     run(
-      `UPDATE production_entries SET qty = ?, hours = ?
-       WHERE plan_id = ? AND date = ? AND source = 'ai_auto' AND corrected = 0`,
-      qty, hours, p.id, today,
+      `UPDATE production_entries SET qty = ?, hours = ?, notes = ?
+       WHERE tenant_id = ? AND plan_id = ? AND date = ? AND source = 'ai_auto' AND corrected = 0`,
+      qty, hours,
+      'Telemetry estimate from engine hours and planned rate; installed quantity must be measured in the field.',
+      tenantId, p.id, today,
     );
     upserted++;
   }
@@ -328,36 +337,36 @@ export function runAiAnalysis(tenantId: number): AiRunStats {
 }
 
 /**
- * Plan-by-plan schedule projection. Rate = average qty per distinct entry
+ * Plan-by-plan schedule projection from manual production and approved reports.
+ * Telemetry estimates remain reviewable drafts and never count as actuals.
+ * Rate = average qty per distinct entry
  * day; projected finish = today + remaining qty at that rate; at_risk when
  * the projection lands past the planned end date.
  */
 export function computeProjections(tenantId: number): ProjectionRow[] {
-  const today = utcToday();
-  const plans = all<{
-    id: number; jobsite_id: number; jobsite_name: string; phase: string; activity: string;
-    unit: string; planned_qty: number; planned_hours: number; planned_end: string | null;
-    actual_qty: number | null; actual_hours: number | null; entry_days: number;
-  }>(
-    `SELECT p.id, p.jobsite_id, j.name AS jobsite_name, p.phase, p.activity, p.unit,
-       p.planned_qty, p.planned_hours, p.planned_end,
-       SUM(e.qty) AS actual_qty, SUM(e.hours) AS actual_hours,
-       COUNT(DISTINCT e.date) AS entry_days
-     FROM production_plans p
-     JOIN jobsites j ON j.id = p.jobsite_id
-     LEFT JOIN production_entries e ON e.plan_id = p.id
-     WHERE p.tenant_id = ?
-     GROUP BY p.id
-     ORDER BY j.name, p.phase, p.activity`,
-    tenantId,
-  );
+  const today = businessDate();
+  const plans = getErpOverview(tenantId).work_items.sort((a, b) => a.jobsite_name.localeCompare(b.jobsite_name)
+    || a.phase.localeCompare(b.phase) || a.activity.localeCompare(b.activity));
+  const days = new Map(all<{ plan_id: number; entry_days: number }>(
+    `WITH accepted_dates AS (
+       SELECT plan_id, date FROM production_entries WHERE tenant_id = ? AND source = 'manual'
+       UNION ALL
+       SELECT l.plan_id, r.date FROM daily_report_lines l
+       JOIN daily_reports r ON r.id = l.report_id AND r.tenant_id = l.tenant_id
+       WHERE l.tenant_id = ? AND r.status = 'approved'
+       AND NOT EXISTS(SELECT 1 FROM daily_report_reversals v WHERE v.tenant_id=r.tenant_id AND v.report_id=r.id)
+     )
+     SELECT plan_id, COUNT(DISTINCT date) AS entry_days FROM accepted_dates GROUP BY plan_id`,
+    tenantId, tenantId,
+  ).map((row) => [row.plan_id, row.entry_days]));
   return plans.map((p) => {
-    const actualQty = p.actual_qty ?? 0;
-    const actualHours = p.actual_hours ?? 0;
+    const actualQty = p.actual_qty;
+    const actualHours = p.actual_hours;
     const pctComplete = p.planned_qty > 0
       ? Math.min(100, round1((actualQty / p.planned_qty) * 100))
       : 0;
-    const rate = p.entry_days > 0 ? round1(actualQty / p.entry_days) : 0;
+    const entryDays = days.get(p.id) ?? 0;
+    const rate = entryDays > 0 ? actualQty / entryDays : 0;
     const projectedFinish = rate > 0
       ? addDays(today, Math.ceil(Math.max(0, p.planned_qty - actualQty) / rate))
       : null;
@@ -373,10 +382,14 @@ export function computeProjections(tenantId: number): ProjectionRow[] {
       unit: p.unit,
       planned_qty: p.planned_qty,
       planned_hours: p.planned_hours,
-      actual_qty: round1(actualQty),
-      actual_hours: round1(actualHours),
+      actual_qty: actualQty,
+      actual_hours: actualHours,
+      actuals_basis: 'approved_reports_and_manual_field_entries',
       pct_complete: pctComplete,
-      rate_qty_per_day: rate,
+      rate_qty_per_day: round1(rate),
+      recorded_production_days: entryDays,
+      projection_as_of_date: today,
+      projection_basis: 'Indicative calendar-day estimate: average accepted quantity per recorded date, assumed to repeat every calendar day; no work calendar or sequencing adjustment.',
       projected_finish: projectedFinish,
       planned_end: p.planned_end,
       days_variance: daysVariance,

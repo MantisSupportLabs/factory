@@ -1,80 +1,96 @@
 # DirtWorks
 
-Asset-deployment and fleet-telematics platform for heavy-civil contractors — dirt work, roads, utilities, site development. One map answers the questions a super asks all day: where is every machine, is it running, what's it burning, what broke, who's on the clock, and are we on schedule.
+A civil construction ERP workspace for owners, project managers, and field foremen managing earthwork, utilities, and roads across multiple jobs. Jobs, crews, people, equipment, measured production, purchasing, forecasts, and billing share one persistent database. The original live fleet/map tools remain under **Live field workspace**.
 
-Built iPad-first and map-centric: top menu bar, left module sidebar, the live map in the center, and a right-hand inspector for whatever asset or jobsite is selected. Content-heavy modules (reports, timecards, safety, AI insights, connectors) open in a wide drawer over the map. Touch targets are sized for gloves.
+The app now includes the next development phases described in the [civil ERP blueprint](docs/CIVIL_ERP_BLUEPRINT.md). Its operational and commercial ledgers work locally; payroll tax, general ledger, bank connections, and live provider integrations still require implementation and validation.
 
-## Features
+## Working modules
 
-| Area | What you get |
+| Module | Behavior |
 |---|---|
-| **Jobsites** | Sites with geofence boundaries, status, superintendent, production plans vs. actuals, per-site rollups (machines, faults, tools out, timecards today) |
-| **Equipment telematics** | OEM feeds via **ISO 15143-3 (AEMP 2.0)**: Cat VisionLink, John Deere JDLink, Komatsu KOMTRAX, Volvo CareTrack, Hitachi ConSite, DEVELON. Live position, engine status, hours, fuel/DEF, utilization, fault codes. **Read-only by design** — DirtWorks never sends commands to a machine |
-| **Manual tracking** | Anything without telematics gets a pin: tap-to-place on the map, position locked against telemetry overwrites |
-| **Small tools** | Checkout/check-in against employees and jobsites, due-back dates, overdue flags, condition notes, full assignment history |
-| **Cameras** | Ubiquiti / UniFi Protect site cameras on the map with live status (online, recording, last motion) |
-| **Connectivity** | Starlink-to-job-trailer monitoring per site: kit status, throughput, latency, obstruction, plus UniFi gateway health |
-| **Truck fleet** | On-highway dumps and support trucks, haul tickets (loads/tons/material), daily and per-material summaries |
-| **AI automation** | Production entries, quantity projections, and draft timecards generated from telemetry — every feature has an **off switch**, and every auto row can be corrected by hand (with an audit trail) |
-| **Reports** | Daily, production, utilization, safety, and timecard reports generated on demand and stored |
-| **Safety** | JSAs (task, hazards/controls, crew, sign-off) and incident log with days-since-recordable |
+| Portfolio and projects | Jobs, client, PM ownership across multiple jobs, superintendent, contract/budget, dates, coordinates, measured progress and risks |
+| Weekly PM updates | Weekly estimated completion, finish/final-cost forecast, health, blockers and next-week plan; PM estimates stay separate from measured work |
+| People, crews and dispatch | Employee register, crew membership history, frozen dispatched rosters, one crew assignment per day, cross-crew worker conflict checks, required qualifications valid on the assignment date |
+| Time and qualifications | Person/job/code split shifts, interval and legacy-timecard checks, breaks, dated certification expiry, approved wage/burden snapshots, void history and payroll preparation CSV; field roles cannot read individual pay rates |
+| Field production | Work-item targets and cost codes, daily drafts/submission/approval, rejection reasons, immutable approved facts, reversal and linked same-day corrections |
+| Equipment operations | Timed reservations, transfer requests and acceptance/custodian history, conflict checks, inspections, repair/preventive work orders, meter/calendar service rules and explicit return to service |
+| Job costs | Direct costs plus approved source costs; time voids/report reversals remove eligible costs; sourced labor, material usage and completed job repairs post once |
+| Purchasing and inventory | Vendors/items, quantity/price order lines, partial receipt lots, FIFO material usage and remaining stock; legacy whole-order commitments retained separately |
+| Supplier invoices | Received-quantity and price matching, duplicate reference prevention, partial payment balances and append-only AP records |
+| Change controls | RFIs/issues/requests; signed change approvals preserve before/after contract, budget and work-quantity snapshots. Closing a request alone changes no money |
+| Plans and forecasts | Work calendars/holidays, dependencies with cycle detection, baseline versions, bottom-up remaining cost by code/category and approved EAC snapshots; original PO totals are informational and never added twice |
+| Progress billing | Schedule of values/pay items, cumulative quantity or verified-amount applications, certification, retainage, partial customer receipts, release and separate retainage cash receipts |
+| Closeout | Required checklist, measured completion, pending-report/billing/delivery/stock/control checks and recorded final acceptance; collections can settle afterward |
+| Project documents | PDF/images/text/CSV up to 5 MB, retained revisions, project/category register, immutable metadata, file hashes and authenticated downloads |
+| Device drafts | New daily drafts queue on network failure and retry with server idempotency. Export/discard local drafts; approvals and financial actions require a connection |
+| Team access and activity | First-owner setup, individual accounts, seven permission roles, tenant-bound sessions, CSRF/origin checks, durable login throttling, session revocation and append-only mutation audit |
+| Reports and recovery | Operational CSVs, owner-only company JSON export and host SQLite/attachment backups with verified restore into a new directory |
 
-## Quickstart
+Recorded manual production and eligible approved reports establish measured quantities. Telemetry estimates and PM percentages do not create installed work. Mixed units are never added together; project completion weights work-item progress by budget. Manual cost entries require reconciliation with source ledgers.
+
+Material receipt creates stock; material usage creates job cost. Supplier invoice/payment records do not repeat that expense. Maintenance repair cost and operating equipment cost are separate. Forecasts state their as-of date and preserve actual/remaining costs when approved.
+
+## Run the app
+
+Use **Node.js 24+** (the app and recovery tools use `node:sqlite`).
 
 ```bash
 npm install
 npm run build
-npm start        # → http://localhost:4000
+npm start
 ```
 
-That's it. On first boot the server creates the SQLite database, seeds the demo tenant, and starts the simulated OEM feeds — the map is live with a working fleet within one ingest cycle.
-
-Dev mode (hot reload):
+Open [http://localhost:4000](http://localhost:4000). Development:
 
 ```bash
-npm run dev      # server on :4000, Vite on http://localhost:5173 proxying /api → :4000
+npm run dev
 ```
 
-## Demo notes
+Vite opens at [http://localhost:5173](http://localhost:5173) and proxies the API to port 4000. Business records survive refresh and restart while `DB_PATH` and its adjacent `documents/` directory are retained. Schema upgrades preserve existing records; sample ERP records extend the named contractor once.
 
-- The seeded tenant is **Summit DirtWorks & Paving**, a North Texas dirt/paving contractor with three active jobsites, crew, trucks, tools, cameras, Starlink kits, plans, haul tickets, timecards, JSAs, and incidents.
-- Six mock **ISO 15143-3** feeds (one per OEM) simulate the iron fleet. Machines work a 7am–5pm day on a compressed clock: they move, burn fuel, accumulate hours, park at night, and occasionally throw fault codes. `DEMO_TIME_SCALE` controls the compression (default 12 — a full work day plays out in about two real hours).
-- The mock feeds go through the **same** connector → normalization → ingestion pipeline as real OEM APIs; only the credential's `baseUrl` (`mock://<provider>`) differs. The seed never writes fake telemetry rows directly.
+```bash
+npm run typecheck
+npm test --workspace=server
+```
+
+Tests use isolated databases and cover approval/reversal totals, split-time privacy and conflicts, equipment availability, inventory/AP matching, forecasting/billing/retainage, tenant/role denials, document revisions and host recovery.
+
+## Secure company access
+
+Development starts in an explicitly labeled demo mode until the first owner account is created under **Team access & activity**. Enabling access preserves the company records and requires all users to sign in. Accounts belong to a fixed company; a caller header cannot change an authenticated user's company. Employee roster roles and login roles are separate.
+
+With `NODE_ENV=production`, sign-in is required even before setup, and first-owner creation requires the configured `DIRTWORKS_SETUP_TOKEN`. Deploy behind HTTPS, configure the exact `DIRTWORKS_PUBLIC_ORIGIN`, preserve the credential encryption key, and configure protected persistent storage. Owner/admin accounts manage users; PMs review field work; accountants certify billing/forecasts and record cash; dispatchers/mechanics manage their operations. Shared operational summaries remain readable within the company; private individual wage details and payroll exports are restricted.
+
+The audit records successful API mutations, account identity, route, record ID when available and timestamp; it omits passwords, cookies, tokens and request bodies. It is an activity log rather than a full before/after accounting journal. Host administrators can access the database and backup archives.
+
+## Demo and remaining work
+
+The Summit DirtWorks & Paving demo has three North Texas jobs, two PMs, crews, assets, tools, production plans, opening cost balances and sample commercial records. Customers, quantities and costs are illustrative. Six OEM transports use simulated feeds; camera/network status and heuristic estimates also remain simulated. America/Chicago defines ERP business dates.
+
+Remaining major work includes estimating/takeoff, subcontract administration, inventory returns/reallocation, procurement credit/reversal workflows, rentals and equipment ownership costing, leave and multi-job timed crew dispatch, drawing markup/quality testing, schedule/resource calculation, payroll rules/taxes, GL/accounting exports and reconciliation, credit notes/SOV amendments, weekly-update before/after revisions, and real OEM/accounting integrations. Final acceptance intentionally freezes new work; a formal reopening workflow is still needed.
+
+Offline support covers new daily drafts on the device, with an application shell cache in built deployments. It does not provide offline editing of every module, cached authenticated job datasets, background approval, or attachment upload. Device storage is lost when browser data is cleared. Baselines/calendars/dependencies are stored and reviewed; they do not yet produce a full critical-path or resource-loaded schedule.
+
+SQLite supports this local implementation. Shared production deployment still needs capacity/concurrency testing, operational monitoring, managed secrets, backup scheduling and restore rehearsal with the deployed encryption key. Tenant JSON exports omit attachment bytes and credentials and cannot restore the database.
 
 ## Configuration
 
-| Env var | Default | Purpose |
-|---|---|---|
-| `PORT` | `4000` | HTTP port for API + web app |
-| `DB_PATH` | `server/data/dirtworks.db` | SQLite database file |
-| `CREDENTIALS_KEY` | fixed dev key | 32 bytes of hex for AES-256-GCM credential encryption. **Set this in any real deployment** |
-| `INGEST_INTERVAL_SEC` | `45` | OEM feed poll interval |
-| `DEMO_TIME_SCALE` | `12` | Simulated fleet clock speed (1 = real time) |
-| `WEB_DIST` | `web/dist` | Built web app served in single-process mode |
+| Variable | Purpose |
+|---|---|
+| `PORT` | API/built app port; default `4000` |
+| `DB_PATH` | SQLite file; default `server/data/dirtworks.db`; uploads use adjacent `documents/` |
+| `NODE_ENV` | `production` requires secure access and secure session cookies |
+| `DIRTWORKS_SETUP_TOKEN` | Production first-owner setup token |
+| `DIRTWORKS_PUBLIC_ORIGIN` | Exact browser origin used for write-request origin checks |
+| `CREDENTIALS_KEY` | 32-byte hex OEM credential encryption key; fixed development default must be replaced for real credentials |
+| `INGEST_INTERVAL_SEC` | OEM polling; default `45` |
+| `DEMO_TIME_SCALE` | Simulated fleet clock; default `12`, use `1` for real time |
+| `WEB_DIST` | Built web directory; default `web/dist` |
+| `VITE_API_TARGET` | Optional development API proxy target; default `http://localhost:4000` |
 
-## Multi-tenancy
+## Documentation
 
-The schema is tenant-scoped from day one: every business table carries `tenant_id`, OEM credentials are stored per tenant (encrypted), and no query runs untenanted. Today the API resolves the tenant from the `X-Tenant-Id` header (id or slug), falling back to the demo tenant — the SaaS deployment swaps in subdomain/auth-based resolution with no schema changes.
-
-## Demo vs. production
-
-Honest accounting of what's demo-grade and what the production swap looks like:
-
-| Concern | Demo today | Production |
-|---|---|---|
-| Database | SQLite (WAL) | Postgres — schema written to port 1:1 |
-| Credential key | Fixed dev key fallback | `CREDENTIALS_KEY` from KMS |
-| Telematics | Mock `mock://` feeds | Real OEM credentials in the same connectors |
-| Map tiles | MapLibre GL with public Esri imagery / OSM rasters | Drop in a Mapbox (or other) token + style |
-| Tenancy | `X-Tenant-Id` header, seeded tenant | Auth/subdomain-based tenant resolution |
-
-## Roadmap
-
-- **Aftermarket CAN/J1939 trackers** for trucks and older iron — new source (`can_j1939`) feeding the same normalized asset tables; haul cycles derived from payload/location instead of paper tickets.
-- **BLE tool tags** — small tools flip from manual pins to `ble_tracker` source, same asset rows.
-- **Offline-first iPad sync** — field crews keep working through dead zones; Starlink trailer backhaul syncs when it can.
-
-## Docs
-
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — pipeline, normalized model, connector abstraction, security, REST surface.
-- [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) — per-route contract for the feature modules.
+- [Civil ERP blueprint](docs/CIVIL_ERP_BLUEPRINT.md): lifecycle, evidence rules, researched design basis and remaining roadmap.
+- [Backup and recovery](docs/BACKUP_RECOVERY.md): consistent database/files archive and verified isolated restore.
+- [Architecture](docs/ARCHITECTURE.md): existing telematics model and connector pipeline.
+- ERP route modules: `server/src/api/routes/erp.ts`, `workforce-planning.ts`, `equipment-operations.ts`, `procurement.ts`, `project-finance.ts`, `documents.ts`, and `access.ts`.

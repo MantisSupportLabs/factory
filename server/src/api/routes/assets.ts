@@ -23,6 +23,34 @@ const ASSET_COLS = `a.id, a.kind, a.name, a.make, a.model, a.serial_number, a.ye
   a.jobsite_id, a.source, a.provider, a.provider_asset_id, a.tracking_mode, a.status,
   a.operator, a.icon, a.meta, a.created_at, a.updated_at`;
 
+const ASSET_KINDS = ['machine', 'truck', 'small_tool', 'attachment', 'camera', 'network', 'trailer'];
+const ASSET_STATUSES = ['active', 'down', 'maintenance', 'retired'];
+const TRACKING_MODES = ['auto', 'manual'];
+const ASSET_SOURCES = ['oem_telematics', 'can_j1939', 'ble_tracker', 'manual'];
+
+function validId(value: unknown): boolean {
+  return (typeof value === 'number' || (typeof value === 'string' && value.trim() !== ''))
+    && Number.isSafeInteger(Number(value)) && Number(value) > 0;
+}
+
+function validPosition(lat: unknown, lng: unknown): boolean {
+  return typeof lat === 'number' && Number.isFinite(lat) && Math.abs(lat) <= 90
+    && typeof lng === 'number' && Number.isFinite(lng) && Math.abs(lng) <= 180;
+}
+
+function isMeta(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseMeta(raw: string | null): Record<string, unknown> {
+  try {
+    const value: unknown = JSON.parse(raw ?? '{}');
+    return isMeta(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+
 assetsRouter.get('/assets', (req, res) => {
   const t = req.tenant.id;
   const clauses: string[] = ['a.tenant_id = ?'];
@@ -53,36 +81,73 @@ assetsRouter.get('/assets', (req, res) => {
 
 assetsRouter.post('/assets', (req, res) => {
   const t = req.tenant.id;
-  const b = req.body as Record<string, unknown>;
-  if (!b.name || !b.kind) {
-    res.status(400).json({ error: 'name and kind are required' });
+  const b = (req.body ?? {}) as Record<string, unknown>;
+  if (typeof b.name !== 'string' || !b.name.trim() || typeof b.kind !== 'string' || !ASSET_KINDS.includes(b.kind)) {
+    res.status(400).json({ error: `name is required and kind must be one of: ${ASSET_KINDS.join(', ')}` });
     return;
   }
+  const trackingMode = b.tracking_mode ?? 'manual';
+  const status = b.status ?? 'active';
+  const source = b.source ?? 'manual';
+  if (typeof trackingMode !== 'string' || !TRACKING_MODES.includes(trackingMode)
+    || typeof status !== 'string' || !ASSET_STATUSES.includes(status)
+    || typeof source !== 'string' || !ASSET_SOURCES.includes(source)) {
+    res.status(400).json({ error: 'invalid tracking_mode, status or source' });
+    return;
+  }
+  if (b.jobsite_id != null && !validId(b.jobsite_id)) {
+    res.status(400).json({ error: 'jobsite_id must be a positive integer or null' });
+    return;
+  }
+  const jobsiteId = b.jobsite_id != null ? Number(b.jobsite_id) : null;
+  if (jobsiteId !== null && !get(`SELECT id FROM jobsites WHERE tenant_id = ? AND id = ?`, t, jobsiteId)) {
+    res.status(404).json({ error: 'jobsite not found' });
+    return;
+  }
+  if ((b.lat != null || b.lng != null) && !validPosition(b.lat, b.lng)) {
+    res.status(400).json({ error: 'lat and lng must be finite numbers within geographic bounds' });
+    return;
+  }
+  if (b.meta != null && !isMeta(b.meta)) {
+    res.status(400).json({ error: 'meta must be an object or null' });
+    return;
+  }
+  if (['make', 'model', 'serial_number', 'category', 'operator'].some((field) => b[field] != null && typeof b[field] !== 'string')) {
+    res.status(400).json({ error: 'make, model, serial_number, category and operator must be strings or null' });
+    return;
+  }
+  if (b.year != null && (!validId(b.year) || Number(b.year) > 9999)) {
+    res.status(400).json({ error: 'year must be a positive integer no greater than 9999 or null' });
+    return;
+  }
+  const meta = { ...(isMeta(b.meta) ? b.meta : {}) };
+  // A dispatcher's assignment must survive later telemetry/geofence updates.
+  if ('jobsite_id' in b) meta.jobsiteLocked = true;
   const result = run(
     `INSERT INTO assets (tenant_id, kind, name, make, model, serial_number, year, category,
        jobsite_id, source, tracking_mode, status, operator, meta)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
-    t, String(b.kind), String(b.name),
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    t, b.kind, b.name.trim(),
     (b.make as string) ?? null, (b.model as string) ?? null, (b.serial_number as string) ?? null,
-    b.year ? Number(b.year) : null, (b.category as string) ?? null,
-    b.jobsite_id ? Number(b.jobsite_id) : null,
-    (b.source as string) ?? 'manual',
-    (b.tracking_mode as string) ?? 'manual',
+    b.year != null ? Number(b.year) : null, (b.category as string) ?? null,
+    jobsiteId, source, trackingMode, status,
     (b.operator as string) ?? null,
-    b.meta ? JSON.stringify(b.meta) : null,
+    Object.keys(meta).length > 0 ? JSON.stringify(meta) : null,
   );
   const id = Number(result.lastInsertRowid);
   // Manual assets dropped with a position get a state row immediately.
-  if (typeof b.lat === 'number' && typeof b.lng === 'number') {
+  if (validPosition(b.lat, b.lng)) {
+    const lat = b.lat as number;
+    const lng = b.lng as number;
     run(
       `INSERT INTO asset_state (asset_id, tenant_id, ts, lat, lng, location_ts, source)
        VALUES (?, ?, ?, ?, ?, ?, 'manual')`,
-      id, t, nowIso(), b.lat, b.lng, nowIso(),
+      id, t, nowIso(), lat, lng, nowIso(),
     );
     run(
       `INSERT OR IGNORE INTO location_history (tenant_id, asset_id, ts, lat, lng, source)
        VALUES (?, ?, ?, ?, ?, 'manual')`,
-      t, id, nowIso(), b.lat, b.lng,
+      t, id, nowIso(), lat, lng,
     );
   }
   res.status(201).json(get(`SELECT ${ASSET_COLS} FROM assets a WHERE a.id = ?`, id));
@@ -120,13 +185,50 @@ assetsRouter.get('/assets/:id', (req, res) => {
 assetsRouter.patch('/assets/:id', (req, res) => {
   const t = req.tenant.id;
   const id = Number(req.params.id);
-  const existing = get<{ id: number }>(`SELECT id FROM assets WHERE tenant_id = ? AND id = ?`, t, id);
+  const existing = get<{ id: number; meta: string | null }>(`SELECT id, meta FROM assets WHERE tenant_id = ? AND id = ?`, t, id);
   if (!existing) { res.status(404).json({ error: 'asset not found' }); return; }
-  const b = req.body as Record<string, unknown>;
+  const b = (req.body ?? {}) as Record<string, unknown>;
+  if ('name' in b && (typeof b.name !== 'string' || !b.name.trim())) {
+    res.status(400).json({ error: 'name must be a nonempty string' });
+    return;
+  }
+  for (const [field, options] of [['tracking_mode', TRACKING_MODES], ['status', ASSET_STATUSES]] as const) {
+    if (field in b && (typeof b[field] !== 'string' || !options.includes(b[field] as string))) {
+      res.status(400).json({ error: `${field} must be one of: ${options.join(', ')}` });
+      return;
+    }
+  }
+  if ('jobsite_id' in b && b.jobsite_id !== null) {
+    if (!validId(b.jobsite_id)) {
+      res.status(400).json({ error: 'jobsite_id must be a positive integer or null' });
+      return;
+    }
+    if (!get(`SELECT id FROM jobsites WHERE tenant_id = ? AND id = ?`, t, Number(b.jobsite_id))) {
+      res.status(404).json({ error: 'jobsite not found' });
+      return;
+    }
+  }
+  if ('meta' in b && b.meta !== null && !isMeta(b.meta)) {
+    res.status(400).json({ error: 'meta must be an object or null' });
+    return;
+  }
+  if (['operator', 'category'].some((field) => field in b && b[field] !== null && typeof b[field] !== 'string')) {
+    res.status(400).json({ error: 'operator and category must be strings or null' });
+    return;
+  }
+  if ('meta' in b || 'jobsite_id' in b) {
+    const currentMeta = parseMeta(existing.meta);
+    const meta = b.meta === null
+      ? (currentMeta.jobsiteLocked ? { jobsiteLocked: true } : {})
+      : { ...currentMeta, ...(isMeta(b.meta) ? b.meta : {}) };
+    // Merge metadata so unrelated kit/tracker settings remain intact.
+    if ('jobsite_id' in b) meta.jobsiteLocked = true;
+    b.meta = Object.keys(meta).length > 0 ? meta : null;
+  }
   const fields: string[] = [];
   const params: (string | number | null)[] = [];
   const allow: Record<string, (v: unknown) => string | number | null> = {
-    name: (v) => String(v),
+    name: (v) => String(v).trim(),
     jobsite_id: (v) => (v === null ? null : Number(v)),
     tracking_mode: (v) => String(v),
     status: (v) => String(v),
@@ -140,7 +242,8 @@ assetsRouter.patch('/assets/:id', (req, res) => {
   if (fields.length === 0) { res.status(400).json({ error: 'no editable fields supplied' }); return; }
   fields.push(`updated_at = ?`);
   params.push(nowIso(), id);
-  run(`UPDATE assets SET ${fields.join(', ')} WHERE id = ?`, ...params);
+  params.push(t);
+  run(`UPDATE assets SET ${fields.join(', ')} WHERE id = ? AND tenant_id = ?`, ...params);
   res.json(get(`SELECT ${ASSET_COLS} FROM assets a WHERE a.id = ?`, id));
 });
 
@@ -148,9 +251,9 @@ assetsRouter.patch('/assets/:id', (req, res) => {
 assetsRouter.post('/assets/:id/position', (req, res) => {
   const t = req.tenant.id;
   const id = Number(req.params.id);
-  const { lat, lng } = req.body as { lat?: number; lng?: number };
-  if (typeof lat !== 'number' || typeof lng !== 'number') {
-    res.status(400).json({ error: 'lat and lng (numbers) are required' });
+  const { lat, lng } = (req.body ?? {}) as { lat?: number; lng?: number };
+  if (!validPosition(lat, lng)) {
+    res.status(400).json({ error: 'lat and lng must be finite numbers within geographic bounds' });
     return;
   }
   const existing = get<{ id: number }>(`SELECT id FROM assets WHERE tenant_id = ? AND id = ?`, t, id);
@@ -159,7 +262,7 @@ assetsRouter.post('/assets/:id/position', (req, res) => {
   run(
     `INSERT OR IGNORE INTO location_history (tenant_id, asset_id, ts, lat, lng, source)
      VALUES (?, ?, ?, ?, ?, 'manual')`,
-    t, id, ts, lat, lng,
+    t, id, ts, lat!, lng!,
   );
   run(
     `INSERT INTO asset_state (asset_id, tenant_id, ts, lat, lng, location_ts, source)
@@ -167,7 +270,7 @@ assetsRouter.post('/assets/:id/position', (req, res) => {
      ON CONFLICT(asset_id) DO UPDATE SET
        ts = excluded.ts, lat = excluded.lat, lng = excluded.lng,
        location_ts = excluded.location_ts, source = 'manual'`,
-    id, t, ts, lat, lng, ts,
+    id, t, ts, lat!, lng!, ts,
   );
   res.json({ ok: true, ts });
 });

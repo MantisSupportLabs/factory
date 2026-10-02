@@ -22,6 +22,16 @@ declare module 'express-serve-static-core' {
 
 export function tenantMiddleware(req: Request, res: Response, next: NextFunction): void {
   const header = req.header('x-tenant-id');
+  if (req.authTenantId !== undefined) {
+    const authenticated = get<TenantRow>('SELECT id,slug,name FROM tenants WHERE id=?',req.authTenantId);
+    if (!authenticated) { res.status(401).json({error:'Your company workspace is unavailable'}); return; }
+    if (header && header !== String(authenticated.id) && header !== authenticated.slug) {
+      res.status(403).json({error:'Your account cannot access a different company'});return;
+    }
+    req.tenant = authenticated;
+    next();
+    return;
+  }
   let tenant: TenantRow | undefined;
   if (header) {
     tenant = /^\d+$/.test(header)

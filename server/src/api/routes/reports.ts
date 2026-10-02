@@ -11,6 +11,7 @@
 import { Router } from 'express';
 import { all, get, nowIso, run } from '../../db/database.js';
 import { computeProjections } from '../../services/ai-engine.js';
+import { getErpOverview } from '../../erp/overview.js';
 
 export const reportsRouter = Router();
 
@@ -63,8 +64,10 @@ reportsRouter.post('/reports/generate', (req, res) => {
   }
   const kind = kindRaw as ReportKind;
   const date = typeof b.date === 'string' && b.date ? b.date : nowIso().slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    res.status(400).json({ error: 'date must be YYYY-MM-DD' });
+  const parsedDate = new Date(`${date}T00:00:00Z`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(parsedDate.getTime())
+    || parsedDate.toISOString().slice(0, 10) !== date) {
+    res.status(400).json({ error: 'date must be a valid calendar date in YYYY-MM-DD format' });
     return;
   }
   const jobsiteId = b.jobsite_id != null ? Number(b.jobsite_id) : null;
@@ -127,11 +130,32 @@ function dailyPayload(t: number, date: string, jobsiteId: number | null): Record
   const site: number[] = jobsiteId !== null ? [jobsiteId] : [];
   const siteSql = (col: string) => (jobsiteId !== null ? `AND ${col} = ?` : '');
 
-  const production = all(
+  const manualProduction = all(
     `SELECT p.activity, p.unit, e.qty, e.hours, e.source
-     FROM production_entries e JOIN production_plans p ON p.id = e.plan_id
-     WHERE e.tenant_id = ? AND e.date = ? ${siteSql('p.jobsite_id')}
+     FROM production_entries e JOIN production_plans p ON p.id = e.plan_id AND p.tenant_id = e.tenant_id
+     WHERE e.tenant_id = ? AND e.date = ? AND e.source = 'manual' ${siteSql('p.jobsite_id')}
      ORDER BY p.activity, e.source`,
+    t, date, ...site,
+  );
+  const overview = getErpOverview(t);
+  const workItems = new Map(overview.work_items.map((item) => [item.id, item]));
+  const approvedFieldReports = overview.daily_reports.filter((report) => report.status === 'approved' && !report.reversed_at
+    && report.date === date && (jobsiteId === null || report.jobsite_id === jobsiteId));
+  const approvedProduction = approvedFieldReports.flatMap((report) => report.lines.flatMap((line) => {
+    const item = workItems.get(line.plan_id);
+    return item ? [{
+      activity: item.activity, unit: item.unit, qty: line.qty, hours: line.labor_hours,
+      source: 'approved_daily_report', report_id: report.id, plan_id: line.plan_id,
+    }] : [];
+  }));
+  const production = [...manualProduction, ...approvedProduction];
+  // Keep estimates available for review while excluding them from actuals.
+  const productionEstimates = all(
+    `SELECT p.activity, p.unit, e.qty, e.hours, e.source, e.notes,
+       'telemetry_estimate' AS measurement_basis
+     FROM production_entries e JOIN production_plans p ON p.id = e.plan_id AND p.tenant_id = e.tenant_id
+     WHERE e.tenant_id = ? AND e.date = ? AND e.source = 'ai_auto' ${siteSql('p.jobsite_id')}
+     ORDER BY p.activity`,
     t, date, ...site,
   );
 
@@ -173,6 +197,9 @@ function dailyPayload(t: number, date: string, jobsiteId: number | null): Record
 
   return {
     production,
+    production_basis: 'approved_reports_and_manual_field_entries',
+    approved_field_reports: approvedFieldReports,
+    production_estimates: productionEstimates,
     hauls: { loads: haulTotals?.loads ?? 0, tons: haulTotals?.tons ?? 0, materials },
     labor: { timecards: labor?.timecards ?? 0, hours: labor?.hours ?? 0 },
     equipment: {

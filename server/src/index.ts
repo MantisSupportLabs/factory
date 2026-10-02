@@ -16,17 +16,31 @@ import { startIngestionService } from './telematics/ingestion.js';
 import { startAiScheduler } from './services/ai-engine.js';
 import { buildApiRouter } from './api/router.js';
 import { tenantMiddleware } from './api/tenancy.js';
+import { initializeErp } from './erp/seed.js';
+import { initCommercial } from './erp/commercial.js';
+import { initializeEquipmentOperations } from './erp/equipment-operations.js';
+import { initializeProcurement } from './erp/procurement.js';
+import { initializeDocuments } from './erp/documents.js';
+import { initializeAccess, accessMiddleware, authorizationMiddleware, auditMiddleware } from './erp/access.js';
+import { initializeProjectFinance } from './erp/project-finance.js';
 
 getDb();
 registerAllConnectors();
 seedIfNeeded();
+initializeErp();
+initCommercial();
+initializeEquipmentOperations();
+initializeProcurement();
+initializeDocuments();
+initializeProjectFinance();
+initializeAccess();
 startIngestionService();
 startAiScheduler();
 
 const app = express();
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '8mb' }));
 
-app.use('/api', tenantMiddleware, buildApiRouter());
+app.use('/api', accessMiddleware, tenantMiddleware, authorizationMiddleware, auditMiddleware, buildApiRouter());
 
 // Serve the built iPad web app when present (production single-process mode).
 if (fs.existsSync(config.webDist)) {
