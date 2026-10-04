@@ -2,7 +2,7 @@
   "name": "dirtworks-platform",
   "version": "0.1.0",
   "private": true,
-  "description": "DirtWorks — heavy civil construction asset deployment & fleet telematics platform",
+  "description": "DirtWorks \u2014 heavy civil construction asset deployment & fleet telematics platform",
   "workspaces": [
     "server",
     "web"
@@ -12,6 +12,14 @@
     "build": "npm run build --workspace=server && npm run build --workspace=web",
     "typecheck": "npm run typecheck --workspace=server && npm run typecheck --workspace=web",
     "start": "npm run start --workspace=server",
-    "seed": "npm run seed --workspace=server"
+    "seed": "npm run seed --workspace=server",
+    "build:demo": "node scripts/build-browser-demo.mjs && VITE_BROWSER_DEMO=true npm run build --workspace=web",
+    "dev:demo": "node scripts/build-browser-demo.mjs && VITE_BROWSER_DEMO=true npm run dev --workspace=web"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  },
+  "engines": {
+    "node": "24.x"
   }
 }

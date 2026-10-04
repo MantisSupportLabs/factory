@@ -4,6 +4,7 @@
  * the login/subdomain in the SaaS build.
  */
 
+import { browserDemo, demoRequest } from '../demo/client';
 const TENANT_KEY = "dirtworks.tenant";
 let csrfToken = "";
 export function setCsrfToken(value: string | null): void {
@@ -39,7 +40,7 @@ async function request<T>(
   path: string,
   body?: unknown,
 ): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const res = browserDemo ? await demoRequest(method, path, body) : await fetch(`/api${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",

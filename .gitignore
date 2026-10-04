@@ -6,3 +6,6 @@ dist/
 server/data/*.db
 server/data/*.db-*
 .DS_Store
+web/public/demo/
+web/demo/connectors.json
+.vercel/

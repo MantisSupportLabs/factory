@@ -10,6 +10,7 @@ import {
 } from "../api/client";
 import type { ERPData } from "./types";
 import { Badge, Empty, Field, Modal, SectionHead } from "./ui";
+import { browserDemo, demoRequest } from '../demo/client';
 
 type Document = {
   id: number;
@@ -40,7 +41,7 @@ const categories = [
 ];
 const label = (value: string) => value.replaceAll("_", " ");
 async function download(path: string, name: string): Promise<void> {
-  const response = await fetch(`/api${path}`, {
+  const response = browserDemo ? await demoRequest('GET', path) : await fetch(`/api${path}`, {
     headers: { "X-Tenant-Id": currentTenant() },
   });
   if (!response.ok) {
